@@ -114,8 +114,8 @@ export function withDelta<T extends KPIData>(current: T, previous: T | null, has
 
 export function getNPSColor(nps: number | null): string {
   if (nps === null) return '#CCCCCC';
-  if (nps >= 65) return '#52CC5A';
-  if (nps >= 30) return '#FFC02A';
+  if (nps >= 50) return '#52CC5A';
+  if (nps >= 0)  return '#FFC02A';
   return '#C0392B';
 }
 

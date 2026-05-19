@@ -39,10 +39,10 @@ export function NPSGauge({ nps, promotores, neutros, detratores, total }: Props)
   return (
     <div className="nps-gauge-wrap">
       <svg viewBox="0 0 160 90" className="nps-gauge-svg">
-        {/* Zonas de cor — limites: NPS 30 → fillAngleDeg 63, NPS 65 → fillAngleDeg 31.5 */}
-        <path d={describeArc(cx, cy, r, 180, 63)}   stroke="#C0392B" strokeWidth="10" fill="none" strokeLinecap="round" />
-        <path d={describeArc(cx, cy, r, 63, 31.5)}  stroke="#FFC02A" strokeWidth="10" fill="none" />
-        <path d={describeArc(cx, cy, r, 31.5, 0)}   stroke="#52CC5A" strokeWidth="10" fill="none" strokeLinecap="round" />
+        {/* Zonas: RED esquerda (NPS<0), YELLOW meio (0–49), GREEN direita (≥50) */}
+        <path d={describeArc(cx, cy, r, 0, 90)}    stroke="#C0392B" strokeWidth="10" fill="none" strokeLinecap="round" />
+        <path d={describeArc(cx, cy, r, 90, 135)}  stroke="#FFC02A" strokeWidth="10" fill="none" />
+        <path d={describeArc(cx, cy, r, 135, 180)} stroke="#52CC5A" strokeWidth="10" fill="none" strokeLinecap="round" />
         {/* Agulha */}
         <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round" />
         <circle cx={cx} cy={cy} r="4" fill="#1A1A1A" />
