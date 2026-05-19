@@ -44,8 +44,8 @@ export function NPSGauge({ nps, promotores, neutros, detratores, total }: Props)
         <path d={describeArc(cx, cy, r, 90, 135)}  stroke="#FFC02A" strokeWidth="10" fill="none" />
         <path d={describeArc(cx, cy, r, 135, 180)} stroke="#52CC5A" strokeWidth="10" fill="none" strokeLinecap="round" />
         {/* Agulha */}
-        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="4" fill="#1A1A1A" />
+        <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="4" fill={color} />
       </svg>
       <div className="nps-gauge-value" style={{ color }}>
         {nps !== null ? `${nps > 0 ? '+' : ''}${nps}` : '—'}
