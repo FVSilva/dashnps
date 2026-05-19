@@ -1,5 +1,5 @@
 import React from 'react';
-import type { KPIData, NPSData } from '../../types';
+import type { KPIData, NPSData, RespostasData } from '../../types';
 import { DeltaBadge } from './DeltaBadge';
 import { NPSGauge } from './NPSGauge';
 import { getNPSColor, getCSATColor } from '../../utils/calculations';
@@ -25,6 +25,7 @@ interface CSATCardProps extends BaseProps {
 /* ── Count Card (respostas) ── */
 interface CountCardProps extends BaseProps {
   variant: 'count';
+  kpi: RespostasData;
   icon?: React.ReactNode;
 }
 
@@ -80,28 +81,27 @@ export function KPICard(props: KPICardProps) {
           {kpi.stdDev !== null && (
             <div className="kpi-std">σ = {kpi.stdDev.toFixed(2)}</div>
           )}
-          <DeltaBadge
-            delta={delta} hasHistory={kpi.hasHistory}
-            previousValue={kpi.previousValue} currentValue={kpi.value}
-            previousPeriodo={previousPeriodo} decimals={2}
-            deltaStdDev={kpi.deltaStdDev}
-          />
+          <CSATClassificationBadge value={kpi.value} />
         </>
       )}
 
-      {props.variant === 'count' && (
-        <>
-          <div className="kpi-value kpi-count">
-            {(props as CountCardProps).icon}
-            {kpi.value !== null ? kpi.value : '—'}
-          </div>
-          <DeltaBadge
-            delta={delta} hasHistory={kpi.hasHistory}
-            previousValue={kpi.previousValue} currentValue={kpi.value}
-            previousPeriodo={previousPeriodo} decimals={0} suffix=" resp."
-          />
-        </>
-      )}
+      {props.variant === 'count' && (() => {
+        const r = kpi as RespostasData;
+        return (
+          <>
+            <div className="kpi-value kpi-count">
+              {(props as CountCardProps).icon}
+              {r.taxaResposta !== null ? `${r.taxaResposta}%` : '—'}
+            </div>
+            <div className="kpi-std">{r.responderam} de {r.totalLinhas} responderam</div>
+            <DeltaBadge
+              delta={delta} hasHistory={kpi.hasHistory}
+              previousValue={kpi.previousValue} currentValue={kpi.value}
+              previousPeriodo={previousPeriodo} decimals={0} suffix="%"
+            />
+          </>
+        );
+      })()}
 
       {props.variant === 'lt' && (
         <>
@@ -123,6 +123,13 @@ export function KPICard(props: KPICardProps) {
       )}
     </div>
   );
+}
+
+function CSATClassificationBadge({ value }: { value: number | null }) {
+  if (value === null) return <span className="delta-badge delta-none">— Sem dados</span>;
+  if (value >= 4.5) return <span className="delta-badge delta-positive">↑ Acima da média</span>;
+  if (value >= 3.5) return <span className="delta-badge delta-neutral">= Dentro da média</span>;
+  return <span className="delta-badge delta-negative">↓ Abaixo da média</span>;
 }
 
 function CSATBar({ value }: { value: number | null }) {

@@ -1,4 +1,4 @@
-import type { EvaluationRow, KPIData, NPSData, CSATVertical } from '../types';
+import type { EvaluationRow, KPIData, NPSData, RespostasData, CSATVertical } from '../types';
 
 function mean(values: number[]): number | null {
   if (!values.length) return null;
@@ -64,14 +64,20 @@ export function calcCSATVertical(rows: EvaluationRow[], vertical: CSATVertical):
   };
 }
 
-export function calcTotalRespostas(rows: EvaluationRow[]): KPIData {
+export function calcTotalRespostas(rows: EvaluationRow[]): RespostasData {
+  const totalLinhas = rows.length;
+  const responderam = rows.filter(r => r.notaNPS !== null).length;
+  const taxaResposta = totalLinhas > 0 ? Math.round((responderam / totalLinhas) * 100) : null;
   return {
-    value: rows.length,
+    value: taxaResposta,
     stdDev: null,
     delta: null,
     deltaStdDev: null,
     previousValue: null,
     hasHistory: false,
+    responderam,
+    totalLinhas,
+    taxaResposta,
   };
 }
 

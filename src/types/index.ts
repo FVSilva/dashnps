@@ -33,6 +33,12 @@ export interface NPSData extends KPIData {
   totalRespostas: number;
 }
 
+export interface RespostasData extends KPIData {
+  responderam: number;
+  totalLinhas: number;
+  taxaResposta: number | null;
+}
+
 export interface FilterState {
   periodos: string[];
   funcoes: FuncaoFilter[];
