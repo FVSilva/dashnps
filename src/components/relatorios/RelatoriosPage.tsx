@@ -65,7 +65,11 @@ function npsColor(v: number) {
 
 export function RelatoriosPage({ data }: Props) {
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
-  const [squadSelecionado, setSquadSelecionado] = useState<string>('');
+  const [squadSelecionado, setSquadSelecionado]     = useState<string>('');
+  const [periodoSelecionado, setPeriodoSelecionado] = useState<string>('');
+  const [verticaisSelecionadas, setVerticaisSelecionadas] = useState<Set<string>>(
+    () => new Set(CSAT_VERTICALS.map(v => v.key))
+  );
 
   const clientes = useMemo(() =>
     [...new Set(data.map(r => r.cliente).filter(Boolean))].sort(),
@@ -75,12 +79,24 @@ export function RelatoriosPage({ data }: Props) {
     [...new Set(data.map(r => r.gp).filter(Boolean))].sort(),
   [data]);
 
+  const todosPeriodos = useMemo(() =>
+    sortPeriodos([...new Set(data.map(r => r.periodo))]),
+  [data]);
+
   const dadosFiltrados = useMemo(() =>
     data.filter(r =>
-      (!clienteSelecionado || r.cliente === clienteSelecionado) &&
-      (!squadSelecionado  || r.gp === squadSelecionado)
+      (!clienteSelecionado  || r.cliente === clienteSelecionado) &&
+      (!squadSelecionado    || r.gp === squadSelecionado) &&
+      (!periodoSelecionado  || r.periodo === periodoSelecionado)
     ),
-  [data, clienteSelecionado, squadSelecionado]);
+  [data, clienteSelecionado, squadSelecionado, periodoSelecionado]);
+
+  const toggleVertical = (key: string) =>
+    setVerticaisSelecionadas(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   const periodos = useMemo(() => sortPeriodos([...new Set(dadosFiltrados.map(r => r.periodo))]), [dadosFiltrados]);
 
@@ -146,7 +162,7 @@ export function RelatoriosPage({ data }: Props) {
       {/* Filtros */}
       <div className="report-filter-bar">
         <div className="filter-wrap">
-          <label className="filter-label">Account</label>
+          <label className="filter-label">Cliente</label>
           <select
             className="filter-trigger filter-select"
             value={clienteSelecionado}
@@ -167,11 +183,22 @@ export function RelatoriosPage({ data }: Props) {
             {squads.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        {(clienteSelecionado || squadSelecionado) && (
+        <div className="filter-wrap">
+          <label className="filter-label">Período</label>
+          <select
+            className="filter-trigger filter-select"
+            value={periodoSelecionado}
+            onChange={e => setPeriodoSelecionado(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {todosPeriodos.map(p => <option key={p} value={p}>{formatPeriodo(p)}</option>)}
+          </select>
+        </div>
+        {(clienteSelecionado || squadSelecionado || periodoSelecionado) && (
           <button
             className="btn-refresh"
             style={{ marginTop: 20 }}
-            onClick={() => { setClienteSelecionado(''); setSquadSelecionado(''); }}
+            onClick={() => { setClienteSelecionado(''); setSquadSelecionado(''); setPeriodoSelecionado(''); }}
           >
             ✕ Limpar
           </button>
@@ -256,6 +283,31 @@ export function RelatoriosPage({ data }: Props) {
       <div className="report-section">
         <div className="section-title">Evolução CSAT por Vertical</div>
         <div className="report-card">
+          {/* Chips de filtro por vertical */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            {CSAT_VERTICALS.map(v => {
+              const ativo = verticaisSelecionadas.has(v.key);
+              return (
+                <button
+                  key={v.key}
+                  onClick={() => toggleVertical(v.key)}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    border: `1.5px solid ${VERTICAL_COLORS[v.key]}`,
+                    background: ativo ? VERTICAL_COLORS[v.key] : 'transparent',
+                    color: ativo ? '#fff' : VERTICAL_COLORS[v.key],
+                    cursor: 'pointer',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {v.label}
+                </button>
+              );
+            })}
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={csatEvolution} margin={{ top: 16, right: 24, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -264,7 +316,7 @@ export function RelatoriosPage({ data }: Props) {
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, name: string) => [v?.toFixed(2), name]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <ReferenceLine y={4.3} stroke="#555" strokeWidth={1.5} label={{ value: 'Meta (4.3)', position: 'right', fontSize: 11, fill: '#555' }} />
-              {CSAT_VERTICALS.map(v => (
+              {CSAT_VERTICALS.filter(v => verticaisSelecionadas.has(v.key)).map(v => (
                 <Line
                   key={v.key}
                   type="monotone"
