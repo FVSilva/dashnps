@@ -65,15 +65,22 @@ function npsColor(v: number) {
 
 export function RelatoriosPage({ data }: Props) {
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
+  const [squadSelecionado, setSquadSelecionado] = useState<string>('');
 
   const clientes = useMemo(() =>
     [...new Set(data.map(r => r.cliente).filter(Boolean))].sort(),
   [data]);
 
-  // Dados filtrados por cliente (se selecionado)
+  const squads = useMemo(() =>
+    [...new Set(data.map(r => r.gp).filter(Boolean))].sort(),
+  [data]);
+
   const dadosFiltrados = useMemo(() =>
-    clienteSelecionado ? data.filter(r => r.cliente === clienteSelecionado) : data,
-  [data, clienteSelecionado]);
+    data.filter(r =>
+      (!clienteSelecionado || r.cliente === clienteSelecionado) &&
+      (!squadSelecionado  || r.gp === squadSelecionado)
+    ),
+  [data, clienteSelecionado, squadSelecionado]);
 
   const periodos = useMemo(() => sortPeriodos([...new Set(dadosFiltrados.map(r => r.periodo))]), [dadosFiltrados]);
 
@@ -133,26 +140,35 @@ export function RelatoriosPage({ data }: Props) {
   return (
     <div className="page-body">
 
-      {/* Filtro de cliente */}
+      {/* Filtros */}
       <div className="report-filter-bar">
         <div className="filter-wrap">
-          <label className="filter-label">Cliente</label>
+          <label className="filter-label">Account</label>
           <select
             className="filter-trigger filter-select"
             value={clienteSelecionado}
             onChange={e => setClienteSelecionado(e.target.value)}
           >
-            <option value="">Todos os clientes</option>
-            {clientes.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
+            <option value="">Todos</option>
+            {clientes.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        {clienteSelecionado && (
+        <div className="filter-wrap">
+          <label className="filter-label">Squad</label>
+          <select
+            className="filter-trigger filter-select"
+            value={squadSelecionado}
+            onChange={e => setSquadSelecionado(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {squads.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        {(clienteSelecionado || squadSelecionado) && (
           <button
             className="btn-refresh"
-            style={{ marginLeft: 8 }}
-            onClick={() => setClienteSelecionado('')}
+            style={{ marginTop: 20 }}
+            onClick={() => { setClienteSelecionado(''); setSquadSelecionado(''); }}
           >
             ✕ Limpar
           </button>
@@ -181,9 +197,7 @@ export function RelatoriosPage({ data }: Props) {
               <XAxis dataKey="periodo" tick={{ fontSize: 12 }} />
               <YAxis domain={[-100, 100]} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v} pts`, 'NPS']} />
-              <ReferenceLine y={65} stroke="#52CC5A" strokeDasharray="4 2" label={{ value: 'Excelente (65)', position: 'right', fontSize: 10, fill: '#52CC5A' }} />
-              <ReferenceLine y={30} stroke="#FFC02A" strokeDasharray="4 2" label={{ value: 'Bom (30)', position: 'right', fontSize: 10, fill: '#FFC02A' }} />
-              <ReferenceLine y={0}  stroke="#C0392B" strokeDasharray="4 2" />
+              <ReferenceLine y={60} stroke="#555" strokeWidth={1.5} label={{ value: 'Meta (60)', position: 'right', fontSize: 11, fill: '#555' }} />
               <Line
                 type="monotone" dataKey="nps" name="NPS Score"
                 stroke="#E50914" strokeWidth={3}
@@ -228,8 +242,7 @@ export function RelatoriosPage({ data }: Props) {
               <XAxis dataKey="periodo" tick={{ fontSize: 12 }} />
               <YAxis domain={[1, 5]} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v?.toFixed(2), 'CSAT Geral']} />
-              <ReferenceLine y={4.5} stroke="#52CC5A" strokeDasharray="4 2" label={{ value: '4.5', position: 'right', fontSize: 10, fill: '#52CC5A' }} />
-              <ReferenceLine y={3.5} stroke="#FFC02A" strokeDasharray="4 2" label={{ value: '3.5', position: 'right', fontSize: 10, fill: '#FFC02A' }} />
+              <ReferenceLine y={4.3} stroke="#555" strokeWidth={1.5} label={{ value: 'Meta (4.3)', position: 'right', fontSize: 11, fill: '#555' }} />
               <Line type="monotone" dataKey="geral" name="CSAT Geral" stroke="#3B82F6" strokeWidth={3} dot={{ r: 5, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
@@ -247,6 +260,7 @@ export function RelatoriosPage({ data }: Props) {
               <YAxis domain={[1, 5]} tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, name: string) => [v?.toFixed(2), name]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
+              <ReferenceLine y={4.3} stroke="#555" strokeWidth={1.5} label={{ value: 'Meta (4.3)', position: 'right', fontSize: 11, fill: '#555' }} />
               {CSAT_VERTICALS.map(v => (
                 <Line
                   key={v.key}
