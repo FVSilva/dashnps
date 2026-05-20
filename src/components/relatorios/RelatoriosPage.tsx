@@ -117,10 +117,13 @@ export function RelatoriosPage({ data }: Props) {
   [periodos, byPeriodo]);
 
   const respostasEvolution = useMemo(() =>
-    periodos.map(p => ({
-      periodo: formatPeriodo(p),
-      respostas: byPeriodo.get(p)?.length ?? 0,
-    })),
+    periodos.map(p => {
+      const rows = byPeriodo.get(p) ?? [];
+      const total = rows.length;
+      const responderam = rows.filter(r => r.notaNPS !== null).length;
+      const taxa = total > 0 ? Math.round((responderam / total) * 100) : 0;
+      return { periodo: formatPeriodo(p), taxa, responderam, total };
+    }),
   [periodos, byPeriodo]);
 
   if (!data.length) {
@@ -278,17 +281,23 @@ export function RelatoriosPage({ data }: Props) {
         </div>
       </div>
 
-      {/* Volume de respostas */}
+      {/* Taxa de respostas */}
       <div className="report-section">
-        <div className="section-title">Volume de Respostas por Mês</div>
+        <div className="section-title">Taxa de Resposta por Mês</div>
         <div className="report-card">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={respostasEvolution} margin={{ top: 16, right: 24, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
               <XAxis dataKey="periodo" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [v, 'Respostas']} />
-              <Bar dataKey="respostas" name="Respostas" fill="#E50914" radius={[4, 4, 0, 0]} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} tickFormatter={(v: number) => `${v}%`} />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(v: number, _: string, entry: any) => [
+                  `${v}% (${entry.payload.responderam} de ${entry.payload.total})`,
+                  'Taxa de Resposta',
+                ]}
+              />
+              <Bar dataKey="taxa" name="Taxa de Resposta" fill="#E50914" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
