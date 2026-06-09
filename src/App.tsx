@@ -3,11 +3,15 @@ import './index.css';
 
 import { useSheets } from './hooks/useSheets';
 import { useFilters } from './hooks/useFilters';
+import { useHealthScore } from './hooks/useHealthScore';
+import { useResultados } from './hooks/useResultados';
 import { FilterBar } from './components/filters/FilterBar';
 import { KPICard } from './components/kpis/KPICard';
 import { VerticalCard } from './components/kpis/VerticalCard';
 import { EvaluationTable } from './components/table/EvaluationTable';
 import { RelatoriosPage } from './components/relatorios/RelatoriosPage';
+import { HealthScorePage } from './components/healthscore/HealthScorePage';
+import { ResultadosPage } from './components/resultados/ResultadosPage';
 
 import {
   calcNPS, calcCSATGeral, calcCSATVertical,
@@ -17,11 +21,13 @@ import { CSAT_VERTICALS } from './types';
 import { formatPeriodo } from './utils/dateUtils';
 import { sortPeriodos } from './utils/dateUtils';
 
-type Page = 'nps-csat' | 'relatorios';
+type Page = 'nps-csat' | 'health-score' | 'resultados' | 'relatorios';
 
 const NAV_ITEMS: { icon: string; label: string; page: Page }[] = [
-  { icon: '⭐', label: 'NPS & CSAT',  page: 'nps-csat' },
-  { icon: '📋', label: 'Relatórios',  page: 'relatorios' },
+  { icon: '⭐', label: 'NPS & CSAT',    page: 'nps-csat' as Page },
+  { icon: '💚', label: 'Health Score',  page: 'health-score' as Page },
+  { icon: '📊', label: 'Resultados',    page: 'resultados' as Page },
+  { icon: '📋', label: 'Relatórios',    page: 'relatorios' as Page },
 ];
 
 export default function App() {
@@ -31,9 +37,17 @@ export default function App() {
     import.meta.env.VITE_SPREADSHEET_ID ? {
       spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID,
       apiKey: import.meta.env.VITE_SHEETS_API_KEY,
-      sheetName: import.meta.env.VITE_SHEET_NAME ?? 'Satisfação_BD',
+      sheetName: import.meta.env.VITE_SHEET_NAME ?? 'BD_Satisfação',
     } : undefined
   );
+
+  const sheetsConfig = import.meta.env.VITE_SPREADSHEET_ID ? {
+    spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID,
+    apiKey: import.meta.env.VITE_SHEETS_API_KEY,
+  } : undefined;
+
+  const { data: healthData, loading: healthLoading, error: healthError, refresh: healthRefresh } = useHealthScore(sheetsConfig);
+  const { data: resultadosData, loading: resultadosLoading, error: resultadosError, refresh: resultadosRefresh } = useResultados(sheetsConfig);
 
   const {
     filters, filteredData, previousPeriodData, hasPreviousPeriod,
@@ -113,9 +127,14 @@ export default function App() {
           <div>
             <h1 className="page-title">
               {currentPage === 'nps-csat' && (<>NPS <span>&</span> CSAT</>)}
+              {currentPage === 'health-score' && 'Health Score'}
+              {currentPage === 'resultados' && 'Resultados'}
               {currentPage === 'relatorios' && 'Relatórios'}
             </h1>
-            <p className="page-subtitle">{filters.squad}{currentPage === 'nps-csat' ? ` · ${periodoDisplay}` : ''}</p>
+            <p className="page-subtitle">
+              {filters.squad}
+              {currentPage === 'nps-csat' ? ` · ${periodoDisplay}` : ''}
+            </p>
           </div>
           <span className={`data-source-badge ${dataSource === 'mock' ? 'mock' : ''}`}>
             {dataSource === 'mock' ? '⚠ Dados de demonstração' : '● Google Sheets'}
@@ -124,6 +143,16 @@ export default function App() {
 
         {/* Página Relatórios */}
         {currentPage === 'relatorios' && <RelatoriosPage data={data} />}
+
+        {/* Página Health Score */}
+        {currentPage === 'health-score' && (
+          <HealthScorePage data={healthData} loading={healthLoading} error={healthError} onRefresh={healthRefresh} />
+        )}
+
+        {/* Página Resultados */}
+        {currentPage === 'resultados' && (
+          <ResultadosPage data={resultadosData} loading={resultadosLoading} error={resultadosError} onRefresh={resultadosRefresh} />
+        )}
 
         {/* Barra de filtros — apenas na página NPS & CSAT */}
         {currentPage === 'nps-csat' && (

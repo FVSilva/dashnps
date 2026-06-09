@@ -16,3 +16,17 @@ export function parseIntOrNull(value: unknown): number | null {
   const n = parseInt(String(value), 10);
   return isNaN(n) ? null : n;
 }
+
+export function parseBRL(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const str = String(value).replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim();
+  const n = parseFloat(str);
+  return isNaN(n) ? null : n;
+}
+
+export function parsePct(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const str = String(value).replace('%', '').replace(',', '.').trim();
+  const n = parseFloat(str);
+  return isNaN(n) ? null : n;
+}

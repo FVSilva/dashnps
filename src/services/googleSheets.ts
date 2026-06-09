@@ -68,7 +68,7 @@ export async function fetchFromSheets(config: SheetsConfig, forceRefresh = false
     return cache!.data;
   }
 
-  const sheetName = config.sheetName ?? 'Satisfação_BD';
+  const sheetName = config.sheetName ?? 'BD_Satisfação';
   const range = encodeURIComponent(`${sheetName}!A1:P1000`);
   let url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}`;
 
