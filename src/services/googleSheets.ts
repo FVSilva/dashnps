@@ -62,6 +62,25 @@ function parseRow(headers: string[], values: string[]): EvaluationRow | null {
   };
 }
 
+/** Conta campos preenchidos em uma EvaluationRow (para desempate na deduplicação) */
+function countFilled(r: EvaluationRow): number {
+  return [r.notaNPS, r.csatGeral, r.atendimento, r.campanhas, r.copys, r.designs, r.prazos, r.resultados]
+    .filter(v => v !== null).length;
+}
+
+/** Remove duplicatas por (cliente, periodo): mantém a linha com mais dados preenchidos */
+function deduplicateRows(rows: EvaluationRow[]): EvaluationRow[] {
+  const map = new Map<string, EvaluationRow>();
+  for (const row of rows) {
+    const key = `${row.cliente}||${row.periodo}`;
+    const existing = map.get(key);
+    if (!existing || countFilled(row) > countFilled(existing)) {
+      map.set(key, row);
+    }
+  }
+  return Array.from(map.values());
+}
+
 /** Busca dados da Google Sheets API v4 */
 export async function fetchFromSheets(config: SheetsConfig, forceRefresh = false): Promise<EvaluationRow[]> {
   if (!forceRefresh && isCacheValid()) {
@@ -96,8 +115,9 @@ export async function fetchFromSheets(config: SheetsConfig, forceRefresh = false
     if (row) data.push(row);
   }
 
-  cache = { data, timestamp: Date.now() };
-  return data;
+  const deduped = deduplicateRows(data);
+  cache = { data: deduped, timestamp: Date.now() };
+  return deduped;
 }
 
 /** Retorna os dados do cache local sem fazer fetch (usado em modo demo) */
