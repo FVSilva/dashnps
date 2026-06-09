@@ -26,11 +26,25 @@ export function parseHealthScoreRows(raw: string[][]): HealthScoreRow[] {
     const data = get(row, ['data']).trim();
     if (!data) continue;
 
+    const rawHs = get(row, ['health score', 'healthscore']).trim();
+    let healthScore: number | null;
+    let healthScoreRaw: string | null;
+
+    if (rawHs.toLowerCase() === 'erro' || rawHs === '') {
+      healthScore = null;
+      healthScoreRaw = rawHs || null;
+    } else {
+      healthScore = parseFloatOrNull(rawHs);
+      healthScoreRaw = rawHs;
+    }
+
     results.push({
       cliente: sanitizeClientName(get(row, ['cliente'])),
+      clienteRaw: get(row, ['cliente']),
       lt: parseIntOrNull(get(row, ['lt'])),
       data,
-      healthScore: parseFloatOrNull(get(row, ['health score'])),
+      healthScore,
+      healthScoreRaw,
       faturamento: parseBRL(get(row, ['faturamento'])),
       roi: parseFloatOrNull(get(row, ['roi'])),
       fatorGravidade: parseFloatOrNull(get(row, ['fator de gravidade'])),

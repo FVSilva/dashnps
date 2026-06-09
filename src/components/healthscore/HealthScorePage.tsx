@@ -1,5 +1,396 @@
 import React, { useMemo, useState } from 'react';
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  LineChart, Line, XAxis, YAxis,
+} from 'recharts';
 import type { HealthScoreRow } from '../../types/healthScore';
+import { sortPeriodos, formatPeriodo, periodoToIndex } from '../../utils/dateUtils';
+
+// ── Types & constants ──────────────────────────────────────────────────────
+
+type Faixa = 'saudavel' | 'atencao' | 'emPerigo' | 'critico' | 'semDados';
+
+function classifyHS(row: HealthScoreRow): Faixa {
+  if (row.healthScoreRaw?.toLowerCase() === 'erro' || row.healthScore === null) return 'semDados';
+  if (row.healthScore >= 8.0) return 'saudavel';
+  if (row.healthScore >= 6.0) return 'atencao';
+  if (row.healthScore >= 4.0) return 'emPerigo';
+  return 'critico';
+}
+
+const FAIXA_COLOR: Record<Faixa, string> = {
+  saudavel: '#27AE60',
+  atencao:  '#D4A017',
+  emPerigo: '#E67E22',
+  critico:  '#E74C3C',
+  semDados: '#999999',
+};
+
+const FAIXA_LABEL: Record<Faixa, string> = {
+  saudavel: 'Saudável',
+  atencao:  'Atenção',
+  emPerigo: 'Em Perigo',
+  critico:  'Crítico',
+  semDados: 'Sem dados',
+};
+
+const FAIXA_ORDER: Record<Faixa, number> = {
+  critico: 0, emPerigo: 1, atencao: 2, saudavel: 3, semDados: 4,
+};
+
+function hasQuedaConsecutiva(clienteRows: HealthScoreRow[]): boolean {
+  if (clienteRows.length < 2) return false;
+  const sorted = [...clienteRows].sort((a, b) => periodoToIndex(a.data) - periodoToIndex(b.data));
+  const faixas = sorted.map(r => FAIXA_ORDER[classifyHS(r)]);
+  const n = faixas.length;
+  if (n >= 3) {
+    return faixas[n - 1] < faixas[n - 2] && faixas[n - 2] < faixas[n - 3];
+  }
+  return faixas[n - 1] < faixas[n - 2];
+}
+
+function avgValues(vals: (number | null)[]): number | null {
+  const valid = vals.filter((v): v is number => v !== null);
+  if (!valid.length) return null;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+// ── HSBadge ───────────────────────────────────────────────────────────────
+
+function HSBadge({ row }: { row: HealthScoreRow }) {
+  const faixa = classifyHS(row);
+  const color = FAIXA_COLOR[faixa];
+  const isErro = row.healthScoreRaw?.toLowerCase() === 'erro';
+  return (
+    <span
+      style={{
+        background: color,
+        color: '#fff',
+        borderRadius: 12,
+        padding: '2px 10px',
+        fontSize: 12,
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+      }}
+      title={isErro ? 'Dados insuficientes para cálculo neste período.' : undefined}
+    >
+      {isErro ? 'Erro' : row.healthScore !== null ? row.healthScore.toFixed(1) : '—'}
+    </span>
+  );
+}
+
+// ── AlertFlags ────────────────────────────────────────────────────────────
+
+function AlertFlags({ row, history }: { row: HealthScoreRow; history: HealthScoreRow[] }) {
+  const faixa = classifyHS(row);
+  const isErro = faixa === 'semDados';
+  const emRisco = !isErro && row.healthScore !== null && row.healthScore < 6.0;
+  const quedaConsec = hasQuedaConsecutiva(history);
+  return (
+    <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {isErro && <span className="delta-badge delta-none">Sem dados</span>}
+      {emRisco && !isErro && <span className="delta-badge delta-negative">Em risco</span>}
+      {quedaConsec && <span className="delta-badge delta-negative">Queda consecutiva</span>}
+    </span>
+  );
+}
+
+// ── SortIcon ──────────────────────────────────────────────────────────────
+
+function SortIcon({ col, sortCol, sortAsc }: { col: string; sortCol: string; sortAsc: boolean }) {
+  if (col !== sortCol) return <span style={{ color: '#ccc', marginLeft: 4 }}>↕</span>;
+  return <span className="sort-icon" style={{ marginLeft: 4 }}>{sortAsc ? '↑' : '↓'}</span>;
+}
+
+// ── HSTable ───────────────────────────────────────────────────────────────
+
+type SortCol = 'idx' | 'cliente' | 'data' | 'gp' | 'lt' | 'healthScore' | 'nps' | 'csat' | 'faturamento' | 'roi';
+
+interface HSTableProps {
+  rows: HealthScoreRow[];
+  allDataByCliente: Map<string, HealthScoreRow[]>;
+  onSelect: (row: HealthScoreRow) => void;
+}
+
+function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
+  const [sortCol, setSortCol] = useState<SortCol>('healthScore');
+  const [sortAsc, setSortAsc] = useState(true);
+
+  function toggleSort(col: SortCol) {
+    if (col === sortCol) {
+      setSortAsc(a => !a);
+    } else {
+      setSortCol(col);
+      setSortAsc(true);
+    }
+  }
+
+  const sorted = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      let av: number | string | null = null;
+      let bv: number | string | null = null;
+      switch (sortCol) {
+        case 'idx':       av = 0; bv = 0; break;
+        case 'cliente':   av = a.cliente; bv = b.cliente; break;
+        case 'data':      av = periodoToIndex(a.data); bv = periodoToIndex(b.data); break;
+        case 'gp':        av = a.gp; bv = b.gp; break;
+        case 'lt':        av = a.lt; bv = b.lt; break;
+        case 'healthScore': av = a.healthScore; bv = b.healthScore; break;
+        case 'nps':       av = a.nps; bv = b.nps; break;
+        case 'csat':      av = a.csat; bv = b.csat; break;
+        case 'faturamento': av = a.faturamento; bv = b.faturamento; break;
+        case 'roi':       av = a.roi; bv = b.roi; break;
+      }
+      // nulls last
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      const na = av as number;
+      const nb = bv as number;
+      return sortAsc ? na - nb : nb - na;
+    });
+  }, [rows, sortCol, sortAsc]);
+
+  function thProps(col: SortCol) {
+    return {
+      className: `sortable${sortCol === col ? ' sorted' : ''}`,
+      onClick: () => toggleSort(col),
+      style: { cursor: 'pointer' },
+    };
+  }
+
+  if (rows.length === 0) {
+    return <div className="eval-empty">Nenhum cliente encontrado para o período selecionado.</div>;
+  }
+
+  return (
+    <div className="eval-table-wrap">
+      <div className="eval-table-scroll">
+        <table className="eval-table">
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}>#</th>
+              <th {...thProps('cliente')}>Cliente <SortIcon col="cliente" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('data')}>Período <SortIcon col="data" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('gp')}>GP <SortIcon col="gp" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('lt')}>LT <SortIcon col="lt" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('healthScore')}>Health Score <SortIcon col="healthScore" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('nps')}>NPS <SortIcon col="nps" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('csat')}>CSAT <SortIcon col="csat" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('faturamento')}>Fatur. <SortIcon col="faturamento" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('roi')}>ROI <SortIcon col="roi" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th>Alertas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((row, i) => {
+              const history = allDataByCliente.get(row.cliente) ?? [];
+              return (
+                <tr
+                  key={`${row.clienteRaw}-${row.data}`}
+                  className={i % 2 === 0 ? 'row-even' : 'row-odd'}
+                  onClick={() => onSelect(row)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td className="cell-num">{i + 1}</td>
+                  <td className="cell-cliente" title={row.clienteRaw}>{row.cliente}</td>
+                  <td>{formatPeriodo(row.data)}</td>
+                  <td>{row.gp || '—'}</td>
+                  <td>{row.lt !== null ? row.lt : <span className="cell-null">—</span>}</td>
+                  <td><HSBadge row={row} /></td>
+                  <td>{row.nps !== null ? row.nps.toFixed(1) : <span className="cell-null">—</span>}</td>
+                  <td>{row.csat !== null ? row.csat.toFixed(2) : <span className="cell-null">—</span>}</td>
+                  <td>
+                    {row.faturamento !== null
+                      ? row.faturamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                      : <span className="cell-null">—</span>}
+                  </td>
+                  <td>{row.roi !== null ? row.roi.toFixed(2) : <span className="cell-null">—</span>}</td>
+                  <td><AlertFlags row={row} history={history} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── ClientModal ───────────────────────────────────────────────────────────
+
+interface MetricDef {
+  label: string;
+  key: keyof HealthScoreRow;
+  radarLabel: string;
+}
+
+const METRICS: MetricDef[] = [
+  { label: 'Faturamento',                    key: 'faturamento',                  radarLabel: 'Fatur.' },
+  { label: 'ROI',                            key: 'roi',                          radarLabel: 'ROI' },
+  { label: 'Fator de Gravidade',             key: 'fatorGravidade',               radarLabel: 'Gravidade' },
+  { label: 'Nível de Consciência',           key: 'nivelConsciencia',             radarLabel: 'Consciência' },
+  { label: 'Profundidade do Relacionamento', key: 'profundidadeRelacionamento',   radarLabel: 'Relacionam.' },
+  { label: 'NPS',                            key: 'nps',                          radarLabel: 'NPS' },
+  { label: 'CSAT',                           key: 'csat',                         radarLabel: 'CSAT' },
+  { label: 'Touch-CS',                       key: 'touchCS',                      radarLabel: 'Touch-CS' },
+  { label: 'Pulsação do Account',            key: 'pulsacaoAccount',              radarLabel: 'Pulsação' },
+  { label: 'Pontualidade dos Pagamentos',    key: 'pontualidadePagamentos',       radarLabel: 'Pontual.' },
+  { label: 'Histórico de Renovações/Upsells',key: 'historicoRenovacoes',          radarLabel: 'Renovações' },
+];
+
+interface ClientModalProps {
+  row: HealthScoreRow;
+  history: HealthScoreRow[];
+  onClose: () => void;
+}
+
+function ClientModal({ row, history, onClose }: ClientModalProps) {
+  const faixa = classifyHS(row);
+  const color = FAIXA_COLOR[faixa];
+
+  const sortedHistory = useMemo(
+    () => [...history].sort((a, b) => periodoToIndex(a.data) - periodoToIndex(b.data)),
+    [history],
+  );
+  const last6 = sortedHistory.slice(-6);
+
+  const sparkData = last6.map(r => ({
+    periodo: formatPeriodo(r.data),
+    hs: r.healthScore,
+  }));
+
+  const radarData = METRICS.map(m => {
+    const val = row[m.key];
+    return { metric: m.radarLabel, value: typeof val === 'number' ? val : 0 };
+  });
+
+  function metricDisplay(m: MetricDef): string {
+    const val = row[m.key];
+    if (val === null || val === undefined) return '—';
+    if (m.key === 'faturamento' && typeof val === 'number') {
+      return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+    if (typeof val === 'number') return val.toFixed(2);
+    return String(val);
+  }
+
+  function metricDot(m: MetricDef): React.ReactNode {
+    const val = row[m.key];
+    if (typeof val !== 'number') return null;
+    const dotColor = val < 5 ? '#E74C3C' : '#27AE60';
+    return <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, display: 'inline-block', flexShrink: 0 }} />;
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ width: Math.min(600, window.innerWidth), height: '100%', background: '#fff', overflowY: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: '#1A1A1A', lineHeight: 1.3 }}>{row.clienteRaw || row.cliente}</div>
+            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+              GP: {row.gp || '—'} &nbsp;·&nbsp; LT: {row.lt !== null ? `${row.lt} meses` : '—'} &nbsp;·&nbsp; Referência: {formatPeriodo(row.data)}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#999', flexShrink: 0, lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Health Score badge large */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ background: color, color: '#fff', borderRadius: 16, padding: '8px 24px', fontSize: 28, fontWeight: 800 }}>
+            {row.healthScoreRaw?.toLowerCase() === 'erro' ? 'Erro' : row.healthScore !== null ? row.healthScore.toFixed(1) : '—'}
+          </span>
+          <div>
+            <div style={{ fontWeight: 700, color, fontSize: 16 }}>{FAIXA_LABEL[faixa]}</div>
+            <div style={{ fontSize: 12, color: '#999' }}>Health Score</div>
+          </div>
+        </div>
+
+        {/* Scores + History side by side */}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+          {/* Left: metrics table */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#333' }}>Scores detalhados</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <tbody>
+                {METRICS.map(m => (
+                  <tr key={m.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '5px 0', color: '#555' }}>{m.label}</td>
+                    <td style={{ padding: '5px 0', textAlign: 'right', fontWeight: 600, color: '#1A1A1A' }}>{metricDisplay(m)}</td>
+                    <td style={{ padding: '5px 0 5px 8px', textAlign: 'center', width: 16 }}>{metricDot(m)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Right: history sparkline */}
+          <div style={{ width: 200, flexShrink: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#333' }}>Histórico HS</div>
+            {sparkData.length > 0 ? (
+              <LineChart width={200} height={160} data={sparkData}>
+                <XAxis dataKey="periodo" tick={{ fontSize: 9 }} />
+                <YAxis domain={[0, 10]} tick={{ fontSize: 9 }} width={20} />
+                <Tooltip formatter={(v: number | null) => [v !== null ? v.toFixed(1) : '—', 'HS']} />
+                <Line
+                  type="monotone"
+                  dataKey="hs"
+                  stroke={color}
+                  strokeWidth={2}
+                  dot={(props) => {
+                    const { cx, cy, payload } = props as { cx: number; cy: number; payload: { periodo: string } };
+                    const isCurrent = payload.periodo === formatPeriodo(row.data);
+                    return (
+                      <circle
+                        key={payload.periodo}
+                        cx={cx}
+                        cy={cy}
+                        r={isCurrent ? 5 : 3}
+                        fill={isCurrent ? color : '#fff'}
+                        stroke={color}
+                        strokeWidth={2}
+                      />
+                    );
+                  }}
+                  connectNulls
+                />
+              </LineChart>
+            ) : (
+              <div style={{ color: '#bbb', fontSize: 12 }}>Sem histórico disponível.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Radar chart */}
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#333' }}>Radar de desempenho</div>
+          <RadarChart width={500} height={280} data={radarData}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 9 }} />
+            <Radar name="Score" dataKey="value" stroke="#E50914" fill="#E50914" fillOpacity={0.3} />
+            <Tooltip />
+          </RadarChart>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page component ───────────────────────────────────────────────────
 
 interface Props {
   data: HealthScoreRow[];
@@ -8,46 +399,134 @@ interface Props {
   onRefresh: () => void;
 }
 
-function healthColor(score: number | null): string {
-  if (score === null) return '';
-  if (score >= 8) return '#52CC5A';
-  if (score >= 6) return '#FFC02A';
-  return '#C0392B';
-}
-
-function avg(values: (number | null)[]): number | null {
-  const valid = values.filter((v): v is number => v !== null);
-  if (!valid.length) return null;
-  return valid.reduce((a, b) => a + b, 0) / valid.length;
-}
-
 export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
-  const [filterGP, setFilterGP] = useState('');
-  const [filterPeriodo, setFilterPeriodo] = useState('');
+  const [periodoFiltro, setPeriodoFiltro] = useState('');
+  const [gpFiltro, setGpFiltro] = useState('');
+  const [faixaFiltro, setFaixaFiltro] = useState('');
+  const [selectedCliente, setSelectedCliente] = useState<HealthScoreRow | null>(null);
 
-  const gpOptions = useMemo(() => {
-    const set = new Set(data.map(r => r.gp).filter(Boolean));
-    return Array.from(set).sort();
-  }, [data]);
+  // All periods sorted
+  const todosPeriodos = useMemo(
+    () => sortPeriodos([...new Set(data.map(r => r.data))]),
+    [data],
+  );
 
-  const periodoOptions = useMemo(() => {
-    const set = new Set(data.map(r => r.data).filter(Boolean));
-    return Array.from(set).sort();
-  }, [data]);
+  // Unique GPs
+  const gps = useMemo(
+    () => [...new Set(data.map(r => r.gp).filter(Boolean))].sort(),
+    [data],
+  );
 
-  const filtered = useMemo(() => {
-    return data.filter(r => {
-      if (filterGP && r.gp !== filterGP) return false;
-      if (filterPeriodo && r.data !== filterPeriodo) return false;
-      return true;
+  const currentPeriodo = periodoFiltro || todosPeriodos[todosPeriodos.length - 1] || '';
+
+  // Data for the current period (before faixa filter, after gp filter)
+  const baseCurrentData = useMemo(() => {
+    let d = data.filter(r => r.data === currentPeriodo);
+    if (gpFiltro) d = d.filter(r => r.gp === gpFiltro);
+    return d;
+  }, [data, currentPeriodo, gpFiltro]);
+
+  // currentData with faixa filter applied
+  const currentData = useMemo(() => {
+    if (!faixaFiltro) return baseCurrentData;
+    return baseCurrentData.filter(r => classifyHS(r) === faixaFiltro);
+  }, [baseCurrentData, faixaFiltro]);
+
+  // Previous period
+  const prevPeriodo = useMemo(() => {
+    const idx = todosPeriodos.indexOf(currentPeriodo);
+    return idx > 0 ? todosPeriodos[idx - 1] : '';
+  }, [todosPeriodos, currentPeriodo]);
+
+  const prevData = useMemo(
+    () => data.filter(r => r.data === prevPeriodo),
+    [data, prevPeriodo],
+  );
+
+  // Maps for MoM comparison
+  const classByCliente = useMemo(() => {
+    const map = new Map<string, Faixa>();
+    baseCurrentData.forEach(r => map.set(r.cliente, classifyHS(r)));
+    return map;
+  }, [baseCurrentData]);
+
+  const prevClassByCliente = useMemo(() => {
+    const map = new Map<string, Faixa>();
+    prevData.forEach(r => map.set(r.cliente, classifyHS(r)));
+    return map;
+  }, [prevData]);
+
+  const momStats = useMemo(() => {
+    let increased = 0, decreased = 0, same = 0;
+    classByCliente.forEach((faixa, cliente) => {
+      const prev = prevClassByCliente.get(cliente);
+      if (!prev) return;
+      const cur = FAIXA_ORDER[faixa];
+      const old = FAIXA_ORDER[prev];
+      if (cur > old) increased++;
+      else if (cur < old) decreased++;
+      else same++;
     });
-  }, [data, filterGP, filterPeriodo]);
+    return { increased, decreased, same };
+  }, [classByCliente, prevClassByCliente]);
 
-  const avgHS = useMemo(() => avg(filtered.map(r => r.healthScore)), [filtered]);
-  const avgNPS = useMemo(() => avg(filtered.map(r => r.nps)), [filtered]);
-  const avgCSAT = useMemo(() => avg(filtered.map(r => r.csat)), [filtered]);
+  // Faixa counts from baseCurrentData (before faixa filter)
+  const faixaCounts = useMemo(() => {
+    const counts = { saudavel: 0, atencao: 0, emPerigo: 0, critico: 0, semDados: 0 };
+    baseCurrentData.forEach(r => { counts[classifyHS(r)]++; });
+    return counts;
+  }, [baseCurrentData]);
 
-  const hsColor = healthColor(avgHS);
+  // Averages from baseCurrentData
+  const npsMedia = useMemo(() => {
+    const rows = baseCurrentData.filter(r => classifyHS(r) !== 'semDados' && r.nps !== null);
+    return avgValues(rows.map(r => r.nps));
+  }, [baseCurrentData]);
+
+  const csatMedia = useMemo(() => {
+    const rows = baseCurrentData.filter(r => r.csat !== null);
+    return avgValues(rows.map(r => r.csat));
+  }, [baseCurrentData]);
+
+  // All data grouped by cliente for modal history
+  const allDataByCliente = useMemo(() => {
+    const map = new Map<string, HealthScoreRow[]>();
+    data.forEach(r => {
+      const arr = map.get(r.cliente) ?? [];
+      arr.push(r);
+      map.set(r.cliente, arr);
+    });
+    return map;
+  }, [data]);
+
+  // Alertas: HS < 6 or semDados, top 5 sorted by HS ascending (nulls last)
+  const alertasRows = useMemo(() => {
+    return baseCurrentData
+      .filter(r => {
+        const f = classifyHS(r);
+        return f === 'semDados' || (r.healthScore !== null && r.healthScore < 6);
+      })
+      .sort((a, b) => {
+        if (a.healthScore === null && b.healthScore === null) return 0;
+        if (a.healthScore === null) return 1;
+        if (b.healthScore === null) return -1;
+        return a.healthScore - b.healthScore;
+      })
+      .slice(0, 5);
+  }, [baseCurrentData]);
+
+  // Pie data
+  const pieData = useMemo(() => {
+    const entries: { name: string; value: number; color: string }[] = [];
+    (Object.entries(faixaCounts) as [Faixa, number][]).forEach(([faixa, count]) => {
+      if (count > 0) {
+        entries.push({ name: FAIXA_LABEL[faixa], value: count, color: FAIXA_COLOR[faixa] });
+      }
+    });
+    return entries;
+  }, [faixaCounts]);
+
+  const hasActiveFilter = !!(periodoFiltro || gpFiltro || faixaFiltro);
 
   if (error) {
     return (
@@ -67,128 +546,191 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
       {/* Filter bar */}
       <div className="report-filter-bar">
         <div className="filter-wrap">
-          <span className="filter-label">GP/Squad</span>
+          <span className="filter-label">Período</span>
           <select
             className="filter-trigger filter-select"
-            value={filterGP}
-            onChange={e => setFilterGP(e.target.value)}
+            value={periodoFiltro}
+            onChange={e => setPeriodoFiltro(e.target.value)}
+          >
+            <option value="">Último disponível</option>
+            {todosPeriodos.map(p => (
+              <option key={p} value={p}>{formatPeriodo(p)}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-wrap">
+          <span className="filter-label">GP</span>
+          <select
+            className="filter-trigger filter-select"
+            value={gpFiltro}
+            onChange={e => setGpFiltro(e.target.value)}
           >
             <option value="">Todos</option>
-            {gpOptions.map(gp => (
+            {gps.map(gp => (
               <option key={gp} value={gp}>{gp}</option>
             ))}
           </select>
         </div>
+
         <div className="filter-wrap">
-          <span className="filter-label">Período</span>
+          <span className="filter-label">Faixa</span>
           <select
             className="filter-trigger filter-select"
-            value={filterPeriodo}
-            onChange={e => setFilterPeriodo(e.target.value)}
+            value={faixaFiltro}
+            onChange={e => setFaixaFiltro(e.target.value)}
           >
-            <option value="">Todos</option>
-            {periodoOptions.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
+            <option value="">Todas</option>
+            <option value="saudavel">Saudável</option>
+            <option value="atencao">Atenção</option>
+            <option value="emPerigo">Em Perigo</option>
+            <option value="critico">Crítico</option>
+            <option value="semDados">Sem dados</option>
           </select>
         </div>
-        <button className="btn-refresh" onClick={onRefresh} disabled={loading}>
-          {loading ? 'Carregando…' : 'Atualizar'}
-        </button>
+
+        {hasActiveFilter && (
+          <button
+            className="filter-trigger"
+            style={{ alignSelf: 'flex-end', color: '#E74C3C', borderColor: '#E74C3C' }}
+            onClick={() => { setPeriodoFiltro(''); setGpFiltro(''); setFaixaFiltro(''); }}
+          >
+            ✕ Limpar
+          </button>
+        )}
+
+        <div style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}>
+          <button className="btn-refresh" onClick={onRefresh} disabled={loading}>
+            {loading ? 'Carregando…' : '↻ Atualizar'}
+          </button>
+        </div>
       </div>
 
-      {!loading && filtered.length === 0 && (
-        <div className="state-empty">
-          <div className="state-icon">📭</div>
-          <div className="state-title">Nenhum dado encontrado</div>
-          <div className="state-msg">Ajuste os filtros para visualizar dados.</div>
+      {/* KPI row */}
+      <div className="section-title">Visão Geral da Carteira — {formatPeriodo(currentPeriodo)}</div>
+      <div className="kpi-row" style={{ flexWrap: 'wrap' }}>
+        <div className="kpi-card">
+          <div className="kpi-label">Total Clientes</div>
+          {loading ? <div className="kpi-skeleton" /> : <div className="kpi-value">{baseCurrentData.length}</div>}
+        </div>
+        <div className="kpi-card" style={{ borderLeftColor: FAIXA_COLOR.saudavel }}>
+          <div className="kpi-label">Saudável</div>
+          {loading ? <div className="kpi-skeleton" /> : (
+            <div className="kpi-value" style={{ color: FAIXA_COLOR.saudavel }}>{faixaCounts.saudavel}</div>
+          )}
+        </div>
+        <div className="kpi-card" style={{ borderLeftColor: FAIXA_COLOR.atencao }}>
+          <div className="kpi-label">Atenção</div>
+          {loading ? <div className="kpi-skeleton" /> : (
+            <div className="kpi-value" style={{ color: FAIXA_COLOR.atencao }}>{faixaCounts.atencao}</div>
+          )}
+        </div>
+        <div className="kpi-card" style={{ borderLeftColor: FAIXA_COLOR.emPerigo }}>
+          <div className="kpi-label">Em Perigo</div>
+          {loading ? <div className="kpi-skeleton" /> : (
+            <div className="kpi-value" style={{ color: FAIXA_COLOR.emPerigo }}>{faixaCounts.emPerigo}</div>
+          )}
+        </div>
+        <div className="kpi-card" style={{ borderLeftColor: FAIXA_COLOR.critico }}>
+          <div className="kpi-label">Crítico</div>
+          {loading ? <div className="kpi-skeleton" /> : (
+            <div className="kpi-value" style={{ color: FAIXA_COLOR.critico }}>{faixaCounts.critico}</div>
+          )}
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">NPS Médio</div>
+          {loading ? <div className="kpi-skeleton" /> : (
+            <div className="kpi-value">{npsMedia !== null ? npsMedia.toFixed(1) : '—'}</div>
+          )}
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">CSAT Médio</div>
+          {loading ? <div className="kpi-skeleton" /> : (
+            <div className="kpi-value">{csatMedia !== null ? csatMedia.toFixed(2) : '—'}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Distribution + MoM row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+        {/* Donut chart */}
+        <div className="report-card">
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Distribuição por Faixa</div>
+          {loading ? (
+            <div className="kpi-skeleton" style={{ height: 220 }} />
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value">
+                  {pieData.map(entry => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: number) => [`${v} clientes`, '']} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* MoM + Alerts */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* MoM box */}
+          <div className="report-card" style={{ flex: '0 0 auto' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>
+              Variação vs {prevPeriodo ? formatPeriodo(prevPeriodo) : 'período anterior'}
+            </div>
+            {loading ? (
+              <div className="kpi-skeleton" style={{ height: 32 }} />
+            ) : (
+              <div style={{ display: 'flex', gap: 20 }}>
+                <span style={{ color: '#27AE60' }}>↑ {momStats.increased} subiram</span>
+                <span style={{ color: '#E74C3C' }}>↓ {momStats.decreased} caíram</span>
+                <span style={{ color: '#999' }}>= {momStats.same} estáveis</span>
+              </div>
+            )}
+          </div>
+
+          {/* Clients needing attention */}
+          <div className="report-card" style={{ flex: '1 1 auto' }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>⚠ Precisam de atenção agora</div>
+            {loading ? (
+              <div className="kpi-skeleton" style={{ height: 100 }} />
+            ) : alertasRows.length === 0 ? (
+              <div style={{ color: '#27AE60', fontSize: 13 }}>Nenhum cliente em situação crítica.</div>
+            ) : (
+              alertasRows.map(r => (
+                <div
+                  key={r.clienteRaw}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
+                  onClick={() => setSelectedCliente(r)}
+                >
+                  <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>{r.cliente}</span>
+                  <HSBadge row={r} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Client table */}
+      <div className="section-title">Tabela de Clientes</div>
+      {loading ? (
+        <div className="kpi-skeleton" style={{ height: 200 }} />
+      ) : (
+        <div className="report-card" style={{ padding: 0 }}>
+          <HSTable rows={currentData} allDataByCliente={allDataByCliente} onSelect={setSelectedCliente} />
         </div>
       )}
 
-      {(loading || filtered.length > 0) && (
-        <>
-          <div className="section-title">Indicadores Health Score</div>
-          <div className="kpi-row">
-            <div className="kpi-card">
-              <div className="kpi-label">Health Score Médio</div>
-              {loading ? (
-                <div className="kpi-skeleton" />
-              ) : (
-                <div className="kpi-value" style={{ color: hsColor }}>
-                  {avgHS !== null ? avgHS.toFixed(1) : '—'}
-                </div>
-              )}
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label">Clientes</div>
-              {loading ? (
-                <div className="kpi-skeleton" />
-              ) : (
-                <div className="kpi-value">{filtered.length}</div>
-              )}
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label">NPS Médio</div>
-              {loading ? (
-                <div className="kpi-skeleton" />
-              ) : (
-                <div className="kpi-value">
-                  {avgNPS !== null ? Math.round(avgNPS) : '—'}
-                </div>
-              )}
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label">CSAT Médio</div>
-              {loading ? (
-                <div className="kpi-skeleton" />
-              ) : (
-                <div className="kpi-value">
-                  {avgCSAT !== null ? avgCSAT.toFixed(2) : '—'}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="section-title">Clientes</div>
-          {loading ? (
-            <div className="kpi-skeleton" style={{ height: 200 }} />
-          ) : (
-            <table className="eval-table">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Período</th>
-                  <th>GP</th>
-                  <th>Health Score</th>
-                  <th>NPS</th>
-                  <th>CSAT</th>
-                  <th>Faturamento</th>
-                  <th>ROI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((row, i) => (
-                  <tr key={i}>
-                    <td>{row.cliente}</td>
-                    <td>{row.data}</td>
-                    <td>{row.gp}</td>
-                    <td style={{ color: healthColor(row.healthScore), fontWeight: 600 }}>
-                      {row.healthScore !== null ? row.healthScore.toFixed(1) : '—'}
-                    </td>
-                    <td>{row.nps !== null ? row.nps : '—'}</td>
-                    <td>{row.csat !== null ? row.csat.toFixed(2) : '—'}</td>
-                    <td>
-                      {row.faturamento !== null
-                        ? row.faturamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                        : '—'}
-                    </td>
-                    <td>{row.roi !== null ? row.roi.toFixed(2) : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </>
+      {/* Client detail modal */}
+      {selectedCliente && (
+        <ClientModal
+          row={selectedCliente}
+          history={allDataByCliente.get(selectedCliente.cliente) ?? []}
+          onClose={() => setSelectedCliente(null)}
+        />
       )}
     </div>
   );

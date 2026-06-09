@@ -1,8 +1,10 @@
 export interface HealthScoreRow {
-  cliente: string;
+  cliente: string;        // sanitized (no CNPJ)
+  clienteRaw: string;     // original with CNPJ
   lt: number | null;
-  data: string;
+  data: string;           // e.g. "2026-mai."
   healthScore: number | null;
+  healthScoreRaw: string | null;  // "Erro" or numeric string
   faturamento: number | null;
   roi: number | null;
   fatorGravidade: number | null;
