@@ -449,6 +449,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
   const [gpFiltro, setGpFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [clienteFiltro, setClienteFiltro] = useState('');
+  const [squad, setSquad] = useState('Squad Midas');
   const [sortCol, setSortCol] = useState<string>('fatPct');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selectedRow, setSelectedRow] = useState<ResultadosRow | null>(null);
@@ -667,6 +668,18 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
             <option value="amarelo">Próximo da meta</option>
             <option value="vermelho">Abaixo da meta</option>
             <option value="semMeta">Sem meta</option>
+          </select>
+        </div>
+        <div className="filter-wrap">
+          <span className="filter-label">Squad</span>
+          <select
+            className="filter-trigger filter-select"
+            value={squad}
+            onChange={e => setSquad(e.target.value)}
+          >
+            {['Squad Midas', 'Squad Alpha', 'Squad Omega'].map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
         {(periodoFiltro || gpFiltro || statusFiltro || clienteFiltro) && (
