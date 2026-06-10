@@ -4,7 +4,8 @@ import { sanitizeClientName, parseFloatOrNull, parseIntOrNull } from '../utils/s
 export function parseHealthScoreRows(raw: string[][]): HealthScoreRow[] {
   if (raw.length < 2) return [];
 
-  const headers = raw[0].map(h => h.trim().replace(/^["']+|["')]+$/g, '').toLowerCase());
+  // Strip only leading/trailing quote chars (NOT parentheses, to preserve "(NPS)" and "(CSAT)")
+  const headers = raw[0].map(h => h.trim().replace(/^["']+|["']+$/g, '').toLowerCase());
 
   const idx = (names: string[]): number => {
     for (const name of names) {
@@ -53,7 +54,8 @@ export function parseHealthScoreRows(raw: string[][]): HealthScoreRow[] {
       nps: parseFloatOrNull(get(row, ['net promoter score (nps)'])),
       csat: parseFloatOrNull(get(row, ['customer satisfaction (csat)'])),
       touchCS: parseFloatOrNull(get(row, ['touch - cs'])),
-      pulsacaoAccount: parseFloatOrNull(get(row, ['pulsação do account', 'pulsacao do account', '"pulsação do account"'])),
+      // Header in sheet is: "Pulsação do Account") — after stripping quotes → pulsação do account)
+      pulsacaoAccount: parseFloatOrNull(get(row, ['pulsação do account)', 'pulsação do account', 'pulsacao do account'])),
       pontualidadePagamentos: parseFloatOrNull(get(row, ['pontualidade dos pagamentos'])),
       historicoRenovacoes: parseFloatOrNull(get(row, ['histórico de renovações/upsells', 'historico de renovacoes/upsells'])),
       gp: get(row, ['gp']).trim(),

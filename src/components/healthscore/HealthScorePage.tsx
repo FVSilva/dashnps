@@ -13,9 +13,9 @@ type Faixa = 'saudavel' | 'atencao' | 'emPerigo' | 'critico' | 'semDados';
 
 function classifyHS(row: HealthScoreRow): Faixa {
   if (row.healthScoreRaw?.toLowerCase() === 'erro' || row.healthScore === null) return 'semDados';
-  if (row.healthScore >= 8.0) return 'saudavel';
-  if (row.healthScore >= 6.0) return 'atencao';
-  if (row.healthScore >= 4.0) return 'emPerigo';
+  if (row.healthScore >= 9.0) return 'saudavel';
+  if (row.healthScore >= 7.1) return 'atencao';
+  if (row.healthScore >= 5.0) return 'emPerigo';
   return 'critico';
 }
 
@@ -85,7 +85,7 @@ function HSBadge({ row }: { row: HealthScoreRow }) {
 function AlertFlags({ row, history }: { row: HealthScoreRow; history: HealthScoreRow[] }) {
   const faixa = classifyHS(row);
   const isErro = faixa === 'semDados';
-  const emRisco = !isErro && row.healthScore !== null && row.healthScore < 6.0;
+  const emRisco = !isErro && row.healthScore !== null && row.healthScore < 7.1;
   const quedaConsec = hasQuedaConsecutiva(history);
   return (
     <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

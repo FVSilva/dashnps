@@ -24,7 +24,7 @@ import { sortPeriodos } from './utils/dateUtils';
 type Page = 'nps-csat' | 'health-score' | 'resultados' | 'relatorios';
 
 const NAV_ITEMS: { icon: string; label: string; page: Page }[] = [
-  { icon: '⭐', label: 'NPS & CSAT',    page: 'nps-csat' as Page },
+  { icon: '⭐', label: 'Pesquisa de Satisfação', page: 'nps-csat' as Page },
   { icon: '💚', label: 'Health Score',  page: 'health-score' as Page },
   { icon: '📊', label: 'Resultados',    page: 'resultados' as Page },
   { icon: '📋', label: 'Relatórios',    page: 'relatorios' as Page },
@@ -126,7 +126,7 @@ export default function App() {
         <div className="page-header">
           <div>
             <h1 className="page-title">
-              {currentPage === 'nps-csat' && (<>NPS <span>&</span> CSAT</>)}
+              {currentPage === 'nps-csat' && 'Pesquisa de Satisfação'}
               {currentPage === 'health-score' && 'Health Score'}
               {currentPage === 'resultados' && 'Resultados'}
               {currentPage === 'relatorios' && 'Relatórios'}
