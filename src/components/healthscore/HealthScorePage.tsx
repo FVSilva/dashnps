@@ -561,7 +561,7 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
         </div>
 
         <div className="filter-wrap">
-          <span className="filter-label">Squad</span>
+          <span className="filter-label">Gestor de Projetos</span>
           <select
             className="filter-trigger filter-select"
             value={gpFiltro}
