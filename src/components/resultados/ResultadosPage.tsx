@@ -448,6 +448,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
   const [periodoFiltro, setPeriodoFiltro] = useState('');
   const [gpFiltro, setGpFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
+  const [clienteFiltro, setClienteFiltro] = useState('');
   const [sortCol, setSortCol] = useState<string>('fatPct');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selectedRow, setSelectedRow] = useState<ResultadosRow | null>(null);
@@ -461,6 +462,10 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
     () => [...new Set(data.map(r => r.gestor).filter(Boolean))].sort(),
     [data]
   );
+  const clientes = useMemo(
+    () => [...new Set(data.map(r => r.cliente).filter(Boolean))].sort(),
+    [data]
+  );
 
   const currentPeriodo = periodoFiltro || todosPeriodos[0] || '';
 
@@ -471,8 +476,12 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
   }, [data, currentPeriodo]);
 
   const currentAll = useMemo(() =>
-    data.filter(r => r.data === currentPeriodo && (!gpFiltro || r.gestor === gpFiltro)),
-    [data, currentPeriodo, gpFiltro]
+    data.filter(r =>
+      r.data === currentPeriodo &&
+      (!gpFiltro      || r.gestor === gpFiltro) &&
+      (!clienteFiltro || r.cliente === clienteFiltro)
+    ),
+    [data, currentPeriodo, gpFiltro, clienteFiltro]
   );
 
   const filteredData = useMemo(() => {
@@ -634,6 +643,19 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
           </select>
         </div>
         <div className="filter-wrap">
+          <span className="filter-label">Cliente</span>
+          <select
+            className="filter-trigger filter-select"
+            value={clienteFiltro}
+            onChange={e => setClienteFiltro(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {clientes.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-wrap">
           <span className="filter-label">Status</span>
           <select
             className="filter-trigger filter-select"
@@ -647,12 +669,12 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
             <option value="semMeta">Sem meta</option>
           </select>
         </div>
-        {(periodoFiltro || gpFiltro || statusFiltro) && (
+        {(periodoFiltro || gpFiltro || statusFiltro || clienteFiltro) && (
           <button
             className="btn-export"
-            onClick={() => { setPeriodoFiltro(''); setGpFiltro(''); setStatusFiltro(''); }}
+            onClick={() => { setPeriodoFiltro(''); setGpFiltro(''); setStatusFiltro(''); setClienteFiltro(''); }}
           >
-            Limpar
+            ✕ Limpar
           </button>
         )}
         <button className="btn-refresh" onClick={onRefresh} disabled={loading} style={{ marginLeft: 'auto' }}>
