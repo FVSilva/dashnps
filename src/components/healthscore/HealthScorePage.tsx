@@ -96,6 +96,21 @@ function AlertFlags({ row, history }: { row: HealthScoreRow; history: HealthScor
   );
 }
 
+// ── ScoreBadge ────────────────────────────────────────────────────────────
+
+function ScoreBadge({ value }: { value: number | null }) {
+  if (value === null) return <span className="cell-null">—</span>;
+  let bg: string, color: string, label: string;
+  if (value >= 9)      { bg = '#e8f8ee'; color = '#27AE60'; label = 'Bom'; }
+  else if (value >= 6) { bg = '#fef3e2'; color = '#E67E22'; label = 'Em Perigo'; }
+  else                 { bg = '#fde8e8'; color = '#E74C3C'; label = 'Crítico'; }
+  return (
+    <span style={{ background: bg, color, borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {value} · {label}
+    </span>
+  );
+}
+
 // ── SortIcon ──────────────────────────────────────────────────────────────
 
 function SortIcon({ col, sortCol, sortAsc }: { col: string; sortCol: string; sortAsc: boolean }) {
@@ -202,10 +217,10 @@ function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
                   <td>{row.gp || '—'}</td>
                   <td>{row.lt !== null ? row.lt : <span className="cell-null">—</span>}</td>
                   <td><HSBadge row={row} /></td>
-                  <td>{row.nps !== null ? row.nps.toFixed(0) : <span className="cell-null">—</span>}</td>
-                  <td>{row.csat !== null ? row.csat.toFixed(0) : <span className="cell-null">—</span>}</td>
-                  <td>{row.faturamento !== null ? row.faturamento.toFixed(0) : <span className="cell-null">—</span>}</td>
-                  <td>{row.roi !== null ? row.roi.toFixed(0) : <span className="cell-null">—</span>}</td>
+                  <td><ScoreBadge value={row.nps} /></td>
+                  <td><ScoreBadge value={row.csat} /></td>
+                  <td><ScoreBadge value={row.faturamento} /></td>
+                  <td><ScoreBadge value={row.roi} /></td>
                   <td><AlertFlags row={row} history={history} /></td>
                 </tr>
               );

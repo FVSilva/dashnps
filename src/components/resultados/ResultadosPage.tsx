@@ -621,7 +621,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
           </select>
         </div>
         <div className="filter-wrap">
-          <span className="filter-label">GP</span>
+          <span className="filter-label">Gestor de Projetos</span>
           <select
             className="filter-trigger filter-select"
             value={gpFiltro}
