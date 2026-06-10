@@ -1,5 +1,6 @@
 export interface ResultadosRow {
-  cliente: string;
+  cliente: string;        // sanitized (no CNPJ)
+  clienteRaw: string;     // original with CNPJ for modal
   data: string;
   lt: number | null;
   faturamentoP: number | null;

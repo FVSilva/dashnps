@@ -29,6 +29,7 @@ export function parseResultadosRows(raw: string[][]): ResultadosRow[] {
 
     results.push({
       cliente: sanitizeClientName(cliente),
+      clienteRaw: cliente,
       data,
       lt: parseIntOrNull(get(row, ['lt'])),
       faturamentoP: parseBRL(get(row, ['faturamento_p'])),
