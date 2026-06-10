@@ -662,7 +662,8 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
 
       {/* KPI cards */}
       <div className="section-title">Visão Geral — {formatPeriodo(currentPeriodo)}</div>
-      <div className="kpi-row" style={{ flexWrap: 'wrap' }}>
+      {/* KPI Row 1 — totals */}
+      <div className="kpi-row" style={{ marginBottom: 12 }}>
         <div className="kpi-card">
           <div className="kpi-label">Total Clientes</div>
           {loading ? <div className="kpi-skeleton" style={{ height: 40 }} /> : (
@@ -672,15 +673,18 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
         <div className="kpi-card">
           <div className="kpi-label">Fat. Total Realizado</div>
           {loading ? <div className="kpi-skeleton" style={{ height: 40 }} /> : (
-            <div className="kpi-value" style={{ fontSize: 24 }}>{fmtBRL(fatTotalR)}</div>
+            <div className="kpi-value" style={{ fontSize: 22 }}>{fmtBRL(fatTotalR)}</div>
           )}
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Fat. Total Meta</div>
           {loading ? <div className="kpi-skeleton" style={{ height: 40 }} /> : (
-            <div className="kpi-value" style={{ fontSize: 24 }}>{fmtBRL(fatTotalP)}</div>
+            <div className="kpi-value" style={{ fontSize: 22 }}>{fmtBRL(fatTotalP)}</div>
           )}
         </div>
+      </div>
+      {/* KPI Row 2 — rates */}
+      <div className="kpi-row" style={{ marginBottom: 24 }}>
         <div className="kpi-card">
           <div className="kpi-label">ROI Médio</div>
           {loading ? <div className="kpi-skeleton" style={{ height: 40 }} /> : (
@@ -706,7 +710,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
       </div>
 
       {/* Alerts + Distribution */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 8, marginBottom: 24 }}>
         <div className="report-card">
           <div style={{ fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ color: '#E74C3C' }}>⚠</span> Precisam de atenção agora
@@ -752,7 +756,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
 
         <div className="report-card">
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Distribuição por Faixa de ROI</div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={distribuicaoROI} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -769,10 +773,11 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
       </div>
 
       {/* Analytic charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 0 }}>
+      <div className="section-title">Análise de Resultados</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20, marginBottom: 24 }}>
         <div className="report-card">
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Evolução do Faturamento Total</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={260}>
             <LineChart data={evolucaoFat} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="periodo" tick={{ fontSize: 10 }} />
@@ -791,7 +796,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
 
         <div className="report-card">
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Evolução do ROI</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={260}>
             <ScatterChart margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="x" name="Investimento R" type="number" tick={{ fontSize: 10 }} tickFormatter={v => {
@@ -825,14 +830,22 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
       </div>
 
       {/* Top 5 / Bottom 5 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="section-title">Ranking de ROI</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
         <div className="report-card">
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Top 5 ROI Realizado</div>
           {rankingROI.top5.length === 0 && <div style={{ color: '#aaa', fontSize: 13 }}>Sem dados de ROI neste período.</div>}
           {rankingROI.top5.map((r, i) => (
-            <div key={r.clienteRaw} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }} onClick={() => setSelectedRow(r)}>
-              <span style={{ fontSize: 13 }}>
-                <strong style={{ color: '#999', marginRight: 8 }}>#{i + 1}</strong>
+            <div key={r.clienteRaw} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }} onClick={() => setSelectedRow(r)}>
+              <span style={{ fontSize: 13, display: 'flex', alignItems: 'center' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: '#f5f5f5', color: '#999', fontSize: 11, fontWeight: 700, marginRight: 8,
+                  flexShrink: 0,
+                }}>
+                  {i + 1}
+                </span>
                 {r.cliente.slice(0, 25)}
               </span>
               <span style={{ fontWeight: 700, color: '#27AE60' }}>{fmtROI(r.roiR)}</span>
@@ -843,9 +856,16 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Bottom 5 ROI Realizado</div>
           {rankingROI.bottom5.length === 0 && <div style={{ color: '#aaa', fontSize: 13 }}>Sem dados de ROI neste período.</div>}
           {rankingROI.bottom5.map((r, i) => (
-            <div key={r.clienteRaw} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }} onClick={() => setSelectedRow(r)}>
-              <span style={{ fontSize: 13 }}>
-                <strong style={{ color: '#999', marginRight: 8 }}>#{i + 1}</strong>
+            <div key={r.clienteRaw} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }} onClick={() => setSelectedRow(r)}>
+              <span style={{ fontSize: 13, display: 'flex', alignItems: 'center' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: '#f5f5f5', color: '#999', fontSize: 11, fontWeight: 700, marginRight: 8,
+                  flexShrink: 0,
+                }}>
+                  {i + 1}
+                </span>
                 {r.cliente.slice(0, 25)}
               </span>
               <span style={{ fontWeight: 700, color: '#E74C3C' }}>{fmtROI(r.roiR)}</span>
@@ -855,7 +875,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
       </div>
 
       {/* Main table */}
-      <div className="section-title">Tabela de Resultados</div>
+      <div className="section-title" style={{ marginTop: 8 }}>Tabela de Resultados</div>
       <ResultadosTable
         rows={sortedData}
         allDataByCliente={allDataByCliente}

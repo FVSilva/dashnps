@@ -623,7 +623,8 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
 
       {/* KPI row */}
       <div className="section-title">Visão Geral da Carteira — {formatPeriodo(currentPeriodo)}</div>
-      <div className="kpi-row" style={{ flexWrap: 'wrap' }}>
+      {/* KPI Row 1 — faixa counts */}
+      <div className="kpi-row" style={{ marginBottom: 12 }}>
         <div className="kpi-card">
           <div className="kpi-label">Total Clientes</div>
           {loading ? <div className="kpi-skeleton" /> : <div className="kpi-value">{baseCurrentData.length}</div>}
@@ -652,14 +653,17 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
             <div className="kpi-value" style={{ color: FAIXA_COLOR.critico }}>{faixaCounts.critico}</div>
           )}
         </div>
-        <div className="kpi-card">
-          <div className="kpi-label">NPS Médio</div>
+      </div>
+      {/* KPI Row 2 — metrics */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+        <div className="kpi-card" style={{ flex: 1, maxWidth: 340 }}>
+          <div className="kpi-label">NPS Médio (score)</div>
           {loading ? <div className="kpi-skeleton" /> : (
             <div className="kpi-value">{npsMedia !== null ? npsMedia.toFixed(1) : '—'}</div>
           )}
         </div>
-        <div className="kpi-card">
-          <div className="kpi-label">CSAT Médio</div>
+        <div className="kpi-card" style={{ flex: 1, maxWidth: 340 }}>
+          <div className="kpi-label">CSAT Médio (score)</div>
           {loading ? <div className="kpi-skeleton" /> : (
             <div className="kpi-value">{csatMedia !== null ? csatMedia.toFixed(2) : '—'}</div>
           )}
@@ -667,14 +671,14 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
       </div>
 
       {/* Distribution + MoM row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20, marginBottom: 24 }}>
         {/* Donut chart */}
         <div className="report-card">
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Distribuição por Faixa</div>
           {loading ? (
-            <div className="kpi-skeleton" style={{ height: 220 }} />
+            <div className="kpi-skeleton" style={{ height: 260 }} />
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value">
                   {pieData.map(entry => (
@@ -692,16 +696,25 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* MoM box */}
           <div className="report-card" style={{ flex: '0 0 auto' }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 12 }}>
               Variação vs {prevPeriodo ? formatPeriodo(prevPeriodo) : 'período anterior'}
             </div>
             {loading ? (
-              <div className="kpi-skeleton" style={{ height: 32 }} />
+              <div className="kpi-skeleton" style={{ height: 80 }} />
             ) : (
-              <div style={{ display: 'flex', gap: 20 }}>
-                <span style={{ color: '#27AE60' }}>↑ {momStats.increased} subiram</span>
-                <span style={{ color: '#E74C3C' }}>↓ {momStats.decreased} caíram</span>
-                <span style={{ color: '#999' }}>= {momStats.same} estáveis</span>
+              <div style={{ display: 'flex', gap: 0, flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f5f5f5' }}>
+                  <span style={{ color: '#555', fontSize: 14 }}>⬆ Subiram de faixa</span>
+                  <span style={{ fontWeight: 700, color: '#27AE60', fontSize: 18 }}>{momStats.increased}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f5f5f5' }}>
+                  <span style={{ color: '#555', fontSize: 14 }}>⬇ Caíram de faixa</span>
+                  <span style={{ fontWeight: 700, color: '#E74C3C', fontSize: 18 }}>{momStats.decreased}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                  <span style={{ color: '#555', fontSize: 14 }}>= Estáveis</span>
+                  <span style={{ fontWeight: 700, color: '#999', fontSize: 18 }}>{momStats.same}</span>
+                </div>
               </div>
             )}
           </div>
@@ -730,7 +743,7 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
       </div>
 
       {/* Client table */}
-      <div className="section-title">Tabela de Clientes</div>
+      <div className="section-title" style={{ marginTop: 8 }}>Tabela de Clientes</div>
       {loading ? (
         <div className="kpi-skeleton" style={{ height: 200 }} />
       ) : (
