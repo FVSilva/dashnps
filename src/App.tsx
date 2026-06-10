@@ -146,7 +146,11 @@ export default function App() {
 
         {/* Página Health Score */}
         {currentPage === 'health-score' && (
-          <HealthScorePage data={healthData} loading={healthLoading} error={healthError} onRefresh={healthRefresh} />
+          <HealthScorePage
+            data={healthData} loading={healthLoading} error={healthError} onRefresh={healthRefresh}
+            satisfacaoData={data}
+            resultadosData={resultadosData}
+          />
         )}
 
         {/* Página Resultados */}

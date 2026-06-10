@@ -5,6 +5,8 @@ import {
   LineChart, Line, XAxis, YAxis,
 } from 'recharts';
 import type { HealthScoreRow } from '../../types/healthScore';
+import type { EvaluationRow } from '../../types';
+import type { ResultadosRow } from '../../types/resultados';
 import { sortPeriodos, formatPeriodo, periodoToIndex } from '../../utils/dateUtils';
 
 // ── Types & constants ──────────────────────────────────────────────────────
@@ -126,9 +128,11 @@ interface HSTableProps {
   rows: HealthScoreRow[];
   allDataByCliente: Map<string, HealthScoreRow[]>;
   onSelect: (row: HealthScoreRow) => void;
+  csatLookup: Map<string, number>;
+  resultadosLookup: Map<string, { fat: number | null; roi: number | null }>;
 }
 
-function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
+function HSTable({ rows, allDataByCliente, onSelect, csatLookup, resultadosLookup }: HSTableProps) {
   const [sortCol, setSortCol] = useState<SortCol>('healthScore');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -194,10 +198,10 @@ function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
               <th {...thProps('gp')}>GP <SortIcon col="gp" sortCol={sortCol} sortAsc={sortAsc} /></th>
               <th {...thProps('lt')}>LT <SortIcon col="lt" sortCol={sortCol} sortAsc={sortAsc} /></th>
               <th {...thProps('healthScore')}>Health Score <SortIcon col="healthScore" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('nps')} title="Score 1/5/10 — não é o NPS real">NPS (score) <SortIcon col="nps" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('csat')} title="Score 1/5/10 — não é o CSAT real">CSAT (score) <SortIcon col="csat" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('faturamento')} title="Score 1/7/10 — atingimento de meta">Fatur. (score) <SortIcon col="faturamento" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('roi')} title="Score 1/7/10 — atingimento de meta">ROI (score) <SortIcon col="roi" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('nps')} title="Score interno 1/5/10 do Health Score">NPS (HS) <SortIcon col="nps" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th title="CSAT real da Pesquisa de Satisfação (escala 1-5)">CSAT</th>
+              <th title="Faturamento realizado (BD_resultados)">Faturamento R</th>
+              <th title="ROI realizado (BD_resultados)">ROI R</th>
               <th>Alertas</th>
             </tr>
           </thead>
@@ -218,9 +222,22 @@ function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
                   <td>{row.lt !== null ? row.lt : <span className="cell-null">—</span>}</td>
                   <td><HSBadge row={row} /></td>
                   <td><ScoreBadge value={row.nps} /></td>
-                  <td><ScoreBadge value={row.csat} /></td>
-                  <td><ScoreBadge value={row.faturamento} /></td>
-                  <td><ScoreBadge value={row.roi} /></td>
+                  {(() => {
+                    const key = `${row.cliente}||${row.data}`;
+                    const csatReal = csatLookup.get(key) ?? null;
+                    const res = resultadosLookup.get(key);
+                    const fatR = res?.fat ?? null;
+                    const roiR = res?.roi ?? null;
+                    return (
+                      <>
+                        <td style={{ color: csatReal !== null ? (csatReal >= 4.3 ? '#27AE60' : csatReal >= 3.5 ? '#D4A017' : '#E74C3C') : undefined, fontWeight: csatReal !== null ? 600 : undefined }}>
+                          {csatReal !== null ? csatReal.toFixed(2) : <span className="cell-null">—</span>}
+                        </td>
+                        <td>{fatR !== null ? fatR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : <span className="cell-null">—</span>}</td>
+                        <td style={{ color: roiR !== null ? '#3B82F6' : undefined }}>{roiR !== null ? `${roiR.toFixed(2)}×` : <span className="cell-null">—</span>}</td>
+                      </>
+                    );
+                  })()}
                   <td><AlertFlags row={row} history={history} /></td>
                 </tr>
               );
@@ -405,14 +422,38 @@ interface Props {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+  satisfacaoData?: EvaluationRow[];
+  resultadosData?: ResultadosRow[];
 }
 
-export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
+export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoData = [], resultadosData = [] }: Props) {
   const [periodoFiltro, setPeriodoFiltro] = useState('');
   const [gpFiltro, setGpFiltro] = useState('');
   const [faixaFiltro, setFaixaFiltro] = useState('');
   const [clienteFiltro, setClienteFiltro] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<HealthScoreRow | null>(null);
+
+  // Lookup: CSAT real por cliente+período (de BD_Satisfação)
+  const csatLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    satisfacaoData.forEach(r => {
+      if (r.csatGeral !== null) {
+        const key = `${r.cliente}||${r.periodo}`;
+        const prev = map.get(key);
+        map.set(key, prev !== undefined ? (prev + r.csatGeral) / 2 : r.csatGeral);
+      }
+    });
+    return map;
+  }, [satisfacaoData]);
+
+  // Lookup: Faturamento e ROI reais por cliente+período (de BD_resultados)
+  const resultadosLookup = useMemo(() => {
+    const map = new Map<string, { fat: number | null; roi: number | null }>();
+    resultadosData.forEach(r => {
+      map.set(`${r.cliente}||${r.data}`, { fat: r.faturamentoR, roi: r.roiR });
+    });
+    return map;
+  }, [resultadosData]);
 
   // All periods sorted
   const todosPeriodos = useMemo(
@@ -762,7 +803,7 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
         <div className="kpi-skeleton" style={{ height: 200 }} />
       ) : (
         <div className="report-card" style={{ padding: 0 }}>
-          <HSTable rows={currentData} allDataByCliente={allDataByCliente} onSelect={setSelectedCliente} />
+          <HSTable rows={currentData} allDataByCliente={allDataByCliente} onSelect={setSelectedCliente} csatLookup={csatLookup} resultadosLookup={resultadosLookup} />
         </div>
       )}
 
