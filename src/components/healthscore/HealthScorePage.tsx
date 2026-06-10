@@ -574,8 +574,9 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
   const alertasRows = useMemo(() => {
     return baseCurrentData
       .filter(r => {
+        if (!r.cliente) return false; // ignorar leads sem nome
         const f = classifyHS(r);
-        return f === 'semDados' || (r.healthScore !== null && r.healthScore < 6);
+        return f === 'emPerigo' || f === 'critico'; // só Em Perigo e Crítico (< 7.1)
       })
       .sort((a, b) => {
         if (a.healthScore === null && b.healthScore === null) return 0;
@@ -811,11 +812,14 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
             ) : (
               alertasRows.map(r => (
                 <div
-                  key={r.clienteRaw}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
+                  key={r.clienteRaw || r.cliente}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', gap: 8 }}
                   onClick={() => setSelectedCliente(r)}
                 >
-                  <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>{r.cliente}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.clienteRaw}>{r.cliente || '—'}</div>
+                    {r.gp && <div style={{ fontSize: 11, color: '#999', marginTop: 1 }}>GP: {r.gp}</div>}
+                  </div>
                   <HSBadge row={r} />
                 </div>
               ))
