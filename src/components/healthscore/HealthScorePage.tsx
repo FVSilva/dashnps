@@ -396,11 +396,18 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
   const [periodoFiltro, setPeriodoFiltro] = useState('');
   const [gpFiltro, setGpFiltro] = useState('');
   const [faixaFiltro, setFaixaFiltro] = useState('');
+  const [clienteFiltro, setClienteFiltro] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<HealthScoreRow | null>(null);
 
   // All periods sorted
   const todosPeriodos = useMemo(
     () => sortPeriodos([...new Set(data.map(r => r.data))]),
+    [data],
+  );
+
+  // Unique clients (from all data for dropdown completeness)
+  const clientes = useMemo(
+    () => [...new Set(data.map(r => r.cliente).filter(Boolean))].sort(),
     [data],
   );
 
@@ -415,9 +422,10 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
   // Data for the current period (before faixa filter, after gp filter)
   const baseCurrentData = useMemo(() => {
     let d = data.filter(r => r.data === currentPeriodo);
-    if (gpFiltro) d = d.filter(r => r.gp === gpFiltro);
+    if (gpFiltro)      d = d.filter(r => r.gp === gpFiltro);
+    if (clienteFiltro) d = d.filter(r => r.cliente === clienteFiltro);
     return d;
-  }, [data, currentPeriodo, gpFiltro]);
+  }, [data, currentPeriodo, gpFiltro, clienteFiltro]);
 
   // currentData with faixa filter applied
   const currentData = useMemo(() => {
@@ -519,7 +527,7 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
     return entries;
   }, [faixaCounts]);
 
-  const hasActiveFilter = !!(periodoFiltro || gpFiltro || faixaFiltro);
+  const hasActiveFilter = !!(periodoFiltro || gpFiltro || faixaFiltro || clienteFiltro);
 
   if (error) {
     return (
@@ -553,7 +561,7 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
         </div>
 
         <div className="filter-wrap">
-          <span className="filter-label">GP</span>
+          <span className="filter-label">Squad</span>
           <select
             className="filter-trigger filter-select"
             value={gpFiltro}
@@ -562,6 +570,20 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
             <option value="">Todos</option>
             {gps.map(gp => (
               <option key={gp} value={gp}>{gp}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-wrap">
+          <span className="filter-label">Cliente</span>
+          <select
+            className="filter-trigger filter-select"
+            value={clienteFiltro}
+            onChange={e => setClienteFiltro(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {clientes.map(c => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
@@ -586,7 +608,7 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
           <button
             className="filter-trigger"
             style={{ alignSelf: 'flex-end', color: '#E74C3C', borderColor: '#E74C3C' }}
-            onClick={() => { setPeriodoFiltro(''); setGpFiltro(''); setFaixaFiltro(''); }}
+            onClick={() => { setPeriodoFiltro(''); setGpFiltro(''); setFaixaFiltro(''); setClienteFiltro(''); }}
           >
             ✕ Limpar
           </button>
