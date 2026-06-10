@@ -54,8 +54,8 @@ export function parseHealthScoreRows(raw: string[][]): HealthScoreRow[] {
       nps: parseFloatOrNull(get(row, ['net promoter score (nps)'])),
       csat: parseFloatOrNull(get(row, ['customer satisfaction (csat)'])),
       touchCS: parseFloatOrNull(get(row, ['touch - cs'])),
-      // Header in sheet is: "Pulsação do Account") — after stripping quotes → pulsação do account)
-      pulsacaoAccount: parseFloatOrNull(get(row, ['pulsação do account)', 'pulsação do account', 'pulsacao do account'])),
+      // Header in sheet: "Pulsação do Account") → strip leading " → pulsação do account") (note embedded ")
+      pulsacaoAccount: parseFloatOrNull(get(row, ['pulsação do account")', 'pulsação do account)', 'pulsação do account', 'pulsacao do account'])),
       pontualidadePagamentos: parseFloatOrNull(get(row, ['pontualidade dos pagamentos'])),
       historicoRenovacoes: parseFloatOrNull(get(row, ['histórico de renovações/upsells', 'historico de renovacoes/upsells'])),
       gp: get(row, ['gp']).trim(),
