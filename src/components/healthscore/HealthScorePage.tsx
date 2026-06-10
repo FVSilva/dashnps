@@ -241,10 +241,10 @@ function HSTable({ rows, allDataByCliente, onSelect, csatLookup, resultadosLooku
                           {csatReal !== null ? csatReal.toFixed(2) : <span className="cell-null">—</span>}
                         </td>
                         <td style={{ color: fatColor, fontWeight: fatColor ? 600 : undefined }}>
-                          {fatR !== null ? fatR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : <span className="cell-null">—</span>}
+                          {fatR !== null && fatR > 0 ? fatR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : <span className="cell-null">—</span>}
                         </td>
                         <td style={{ color: roiColor, fontWeight: roiColor ? 600 : undefined }}>
-                          {roiR !== null ? `${roiR.toFixed(2)}×` : <span className="cell-null">—</span>}
+                          {roiR !== null && roiR > 0 ? `${roiR.toFixed(2)}×` : <span className="cell-null">—</span>}
                         </td>
                       </>
                     );
@@ -810,19 +810,28 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
             ) : alertasRows.length === 0 ? (
               <div style={{ color: '#27AE60', fontSize: 13 }}>Nenhum cliente em situação crítica.</div>
             ) : (
-              alertasRows.map(r => (
-                <div
-                  key={r.clienteRaw || r.cliente}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', gap: 8 }}
-                  onClick={() => setSelectedCliente(r)}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.clienteRaw}>{r.cliente || '—'}</div>
-                    {r.gp && <div style={{ fontSize: 11, color: '#999', marginTop: 1 }}>GP: {r.gp}</div>}
+              alertasRows.map((r, idx) => {
+                const lkKey = `${r.cliente}||${r.data}`;
+                const fatR = resultadosLookup.get(lkKey)?.fat ?? null;
+                const csatReal = csatLookup.get(lkKey) ?? null;
+                return (
+                  <div
+                    key={idx}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', gap: 8 }}
+                    onClick={() => setSelectedCliente(r)}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.clienteRaw}>{r.cliente || '—'}</div>
+                      <div style={{ display: 'flex', gap: 10, marginTop: 2, fontSize: 11, color: '#888' }}>
+                        {r.gp && <span>GP: {r.gp}</span>}
+                        {csatReal !== null && <span>CSAT: <strong style={{ color: '#555' }}>{csatReal.toFixed(2)}</strong></span>}
+                        {fatR !== null && fatR > 0 && <span>Fat: <strong style={{ color: '#555' }}>{fatR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</strong></span>}
+                      </div>
+                    </div>
+                    <HSBadge row={r} />
                   </div>
-                  <HSBadge row={r} />
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
