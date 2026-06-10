@@ -1,10 +1,10 @@
 import type { HealthScoreRow } from '../types/healthScore';
-import { sanitizeClientName, parseFloatOrNull, parseIntOrNull, parseBRL } from '../utils/sanitize';
+import { sanitizeClientName, parseFloatOrNull, parseIntOrNull } from '../utils/sanitize';
 
 export function parseHealthScoreRows(raw: string[][]): HealthScoreRow[] {
   if (raw.length < 2) return [];
 
-  const headers = raw[0].map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+  const headers = raw[0].map(h => h.trim().replace(/^["']+|["')]+$/g, '').toLowerCase());
 
   const idx = (names: string[]): number => {
     for (const name of names) {
@@ -45,7 +45,7 @@ export function parseHealthScoreRows(raw: string[][]): HealthScoreRow[] {
       data,
       healthScore,
       healthScoreRaw,
-      faturamento: parseBRL(get(row, ['faturamento'])),
+      faturamento: parseFloatOrNull(get(row, ['faturamento'])),
       roi: parseFloatOrNull(get(row, ['roi'])),
       fatorGravidade: parseFloatOrNull(get(row, ['fator de gravidade'])),
       nivelConsciencia: parseFloatOrNull(get(row, ['nível de consciência', 'nivel de consciencia'])),

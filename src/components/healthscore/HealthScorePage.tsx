@@ -179,10 +179,10 @@ function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
               <th {...thProps('gp')}>GP <SortIcon col="gp" sortCol={sortCol} sortAsc={sortAsc} /></th>
               <th {...thProps('lt')}>LT <SortIcon col="lt" sortCol={sortCol} sortAsc={sortAsc} /></th>
               <th {...thProps('healthScore')}>Health Score <SortIcon col="healthScore" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('nps')}>NPS <SortIcon col="nps" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('csat')}>CSAT <SortIcon col="csat" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('faturamento')}>Fatur. <SortIcon col="faturamento" sortCol={sortCol} sortAsc={sortAsc} /></th>
-              <th {...thProps('roi')}>ROI <SortIcon col="roi" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('nps')} title="Score 1/5/10 — não é o NPS real">NPS (score) <SortIcon col="nps" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('csat')} title="Score 1/5/10 — não é o CSAT real">CSAT (score) <SortIcon col="csat" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('faturamento')} title="Score 1/7/10 — atingimento de meta">Fatur. (score) <SortIcon col="faturamento" sortCol={sortCol} sortAsc={sortAsc} /></th>
+              <th {...thProps('roi')} title="Score 1/7/10 — atingimento de meta">ROI (score) <SortIcon col="roi" sortCol={sortCol} sortAsc={sortAsc} /></th>
               <th>Alertas</th>
             </tr>
           </thead>
@@ -202,14 +202,10 @@ function HSTable({ rows, allDataByCliente, onSelect }: HSTableProps) {
                   <td>{row.gp || '—'}</td>
                   <td>{row.lt !== null ? row.lt : <span className="cell-null">—</span>}</td>
                   <td><HSBadge row={row} /></td>
-                  <td>{row.nps !== null ? row.nps.toFixed(1) : <span className="cell-null">—</span>}</td>
-                  <td>{row.csat !== null ? row.csat.toFixed(2) : <span className="cell-null">—</span>}</td>
-                  <td>
-                    {row.faturamento !== null
-                      ? row.faturamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                      : <span className="cell-null">—</span>}
-                  </td>
-                  <td>{row.roi !== null ? row.roi.toFixed(2) : <span className="cell-null">—</span>}</td>
+                  <td>{row.nps !== null ? row.nps.toFixed(0) : <span className="cell-null">—</span>}</td>
+                  <td>{row.csat !== null ? row.csat.toFixed(0) : <span className="cell-null">—</span>}</td>
+                  <td>{row.faturamento !== null ? row.faturamento.toFixed(0) : <span className="cell-null">—</span>}</td>
+                  <td>{row.roi !== null ? row.roi.toFixed(0) : <span className="cell-null">—</span>}</td>
                   <td><AlertFlags row={row} history={history} /></td>
                 </tr>
               );
@@ -272,10 +268,7 @@ function ClientModal({ row, history, onClose }: ClientModalProps) {
   function metricDisplay(m: MetricDef): string {
     const val = row[m.key];
     if (val === null || val === undefined) return '—';
-    if (m.key === 'faturamento' && typeof val === 'number') {
-      return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
-    if (typeof val === 'number') return val.toFixed(2);
+    if (typeof val === 'number') return val.toFixed(0);
     return String(val);
   }
 
