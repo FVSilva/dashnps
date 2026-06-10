@@ -623,8 +623,8 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
 
       {/* KPI row */}
       <div className="section-title">Visão Geral da Carteira — {formatPeriodo(currentPeriodo)}</div>
-      {/* KPI Row 1 — faixa counts */}
-      <div className="kpi-row" style={{ marginBottom: 12 }}>
+      {/* KPI grid — 7 cards em 2 linhas: 5 + 2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 12 }}>
         <div className="kpi-card">
           <div className="kpi-label">Total Clientes</div>
           {loading ? <div className="kpi-skeleton" /> : <div className="kpi-value">{baseCurrentData.length}</div>}
@@ -654,15 +654,14 @@ export function HealthScorePage({ data, loading, error, onRefresh }: Props) {
           )}
         </div>
       </div>
-      {/* KPI Row 2 — metrics */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-        <div className="kpi-card" style={{ flex: 1, maxWidth: 340 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
+        <div className="kpi-card">
           <div className="kpi-label">NPS Médio (score)</div>
           {loading ? <div className="kpi-skeleton" /> : (
             <div className="kpi-value">{npsMedia !== null ? npsMedia.toFixed(1) : '—'}</div>
           )}
         </div>
-        <div className="kpi-card" style={{ flex: 1, maxWidth: 340 }}>
+        <div className="kpi-card">
           <div className="kpi-label">CSAT Médio (score)</div>
           {loading ? <div className="kpi-skeleton" /> : (
             <div className="kpi-value">{csatMedia !== null ? csatMedia.toFixed(2) : '—'}</div>
