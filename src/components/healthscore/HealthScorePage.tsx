@@ -82,18 +82,30 @@ function HSBadge({ row }: { row: HealthScoreRow }) {
   );
 }
 
-// ── AlertFlags ────────────────────────────────────────────────────────────
+// ── FaixaBadge — mostra status para TODAS as linhas ──────────────────────
 
-function AlertFlags({ row, history }: { row: HealthScoreRow; history: HealthScoreRow[] }) {
+const FAIXA_BADGE_STYLE: Record<Faixa, { bg: string; color: string; label: string }> = {
+  saudavel: { bg: '#e8f8ee', color: '#27AE60', label: 'Saudável' },
+  atencao:  { bg: '#fef9e7', color: '#D4A017', label: 'Atenção' },
+  emPerigo: { bg: '#fef3e2', color: '#E67E22', label: 'Em Perigo' },
+  critico:  { bg: '#fde8e8', color: '#E74C3C', label: 'Crítico' },
+  semDados: { bg: '#f5f5f5', color: '#999999', label: 'Sem dados' },
+};
+
+function FaixaBadge({ row, history }: { row: HealthScoreRow; history: HealthScoreRow[] }) {
   const faixa = classifyHS(row);
-  const isErro = faixa === 'semDados';
-  const emRisco = !isErro && row.healthScore !== null && row.healthScore < 7.1;
-  const quedaConsec = hasQuedaConsecutiva(history);
+  const { bg, color, label } = FAIXA_BADGE_STYLE[faixa];
+  const quedaConsec = faixa !== 'semDados' && hasQuedaConsecutiva(history);
   return (
-    <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {isErro && <span className="delta-badge delta-none">Sem dados</span>}
-      {emRisco && !isErro && <span className="delta-badge delta-negative">Em risco</span>}
-      {quedaConsec && <span className="delta-badge delta-negative">Queda consecutiva</span>}
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+      <span style={{ background: bg, color, borderRadius: 8, padding: '2px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
+      {quedaConsec && (
+        <span style={{ background: '#f3e8ff', color: '#8B5CF6', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>
+          Queda consecutiva
+        </span>
+      )}
     </span>
   );
 }
@@ -205,7 +217,7 @@ function HSTable({ rows, allDataByCliente, onSelect, csatLookup, resultadosLooku
               <th title="CSAT real da Pesquisa de Satisfação (escala 1-5)">CSAT</th>
               <th title="Faturamento realizado (BD_resultados)">Faturamento R</th>
               <th title="ROI realizado (BD_resultados)">ROI R</th>
-              <th>Alertas</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -249,7 +261,7 @@ function HSTable({ rows, allDataByCliente, onSelect, csatLookup, resultadosLooku
                       </>
                     );
                   })()}
-                  <td><AlertFlags row={row} history={history} /></td>
+                  <td><FaixaBadge row={row} history={history} /></td>
                 </tr>
               );
             })}
