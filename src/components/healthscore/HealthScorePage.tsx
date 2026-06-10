@@ -100,16 +100,19 @@ function AlertFlags({ row, history }: { row: HealthScoreRow; history: HealthScor
 
 // ── ScoreBadge ────────────────────────────────────────────────────────────
 
+// Cor baseada na legenda do Health Score (≥9 verde, 7.1–8.99 amarelo, 5–7 laranja, <5 vermelho)
+function hsScoreColor(value: number): string {
+  if (value >= 9.0) return '#27AE60';
+  if (value >= 7.1) return '#D4A017';
+  if (value >= 5.0) return '#E67E22';
+  return '#E74C3C';
+}
+
 function ScoreBadge({ value }: { value: number | null }) {
   if (value === null) return <span className="cell-null">—</span>;
-  let bg: string, color: string, label: string;
-  if (value >= 9)      { bg = '#e8f8ee'; color = '#27AE60'; label = 'Bom'; }
-  else if (value >= 6) { bg = '#fef3e2'; color = '#E67E22'; label = 'Em Perigo'; }
-  else                 { bg = '#fde8e8'; color = '#E74C3C'; label = 'Crítico'; }
+  const color = hsScoreColor(value);
   return (
-    <span style={{ background: bg, color, borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
-      {value} · {label}
-    </span>
+    <span style={{ color, fontWeight: 700, fontSize: 13 }}>{value}</span>
   );
 }
 
@@ -228,13 +231,21 @@ function HSTable({ rows, allDataByCliente, onSelect, csatLookup, resultadosLooku
                     const res = resultadosLookup.get(key);
                     const fatR = res?.fat ?? null;
                     const roiR = res?.roi ?? null;
+                    // Cor baseada no sub-score do BD_Health Score (legenda HS)
+                    const csatColor  = row.csat        !== null ? hsScoreColor(row.csat)        : undefined;
+                    const fatColor   = row.faturamento  !== null ? hsScoreColor(row.faturamento)  : undefined;
+                    const roiColor   = row.roi          !== null ? hsScoreColor(row.roi)          : undefined;
                     return (
                       <>
-                        <td style={{ color: csatReal !== null ? (csatReal >= 4.3 ? '#27AE60' : csatReal >= 3.5 ? '#D4A017' : '#E74C3C') : undefined, fontWeight: csatReal !== null ? 600 : undefined }}>
+                        <td style={{ color: csatColor, fontWeight: csatColor ? 600 : undefined }}>
                           {csatReal !== null ? csatReal.toFixed(2) : <span className="cell-null">—</span>}
                         </td>
-                        <td>{fatR !== null ? fatR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : <span className="cell-null">—</span>}</td>
-                        <td style={{ color: roiR !== null ? '#3B82F6' : undefined }}>{roiR !== null ? `${roiR.toFixed(2)}×` : <span className="cell-null">—</span>}</td>
+                        <td style={{ color: fatColor, fontWeight: fatColor ? 600 : undefined }}>
+                          {fatR !== null ? fatR.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : <span className="cell-null">—</span>}
+                        </td>
+                        <td style={{ color: roiColor, fontWeight: roiColor ? 600 : undefined }}>
+                          {roiR !== null ? `${roiR.toFixed(2)}×` : <span className="cell-null">—</span>}
+                        </td>
                       </>
                     );
                   })()}
