@@ -790,7 +790,7 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
         </div>
 
         <div className="report-card">
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>ROI vs Investimento Realizado</div>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Evolução do ROI</div>
           <ResponsiveContainer width="100%" height={220}>
             <ScatterChart margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
