@@ -426,11 +426,14 @@ interface Props {
   resultadosData?: ResultadosRow[];
 }
 
+const SQUADS = ['Squad Midas', 'Squad Alpha', 'Squad Omega'];
+
 export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoData = [], resultadosData = [] }: Props) {
   const [periodoFiltro, setPeriodoFiltro] = useState('');
   const [gpFiltro, setGpFiltro] = useState('');
   const [faixaFiltro, setFaixaFiltro] = useState('');
   const [clienteFiltro, setClienteFiltro] = useState('');
+  const [squad, setSquad] = useState('Squad Midas');
   const [selectedCliente, setSelectedCliente] = useState<HealthScoreRow | null>(null);
 
   // Lookup: CSAT real por cliente+período (de BD_Satisfação)
@@ -657,6 +660,19 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
             <option value="emPerigo">Em Perigo</option>
             <option value="critico">Crítico</option>
             <option value="semDados">Sem dados</option>
+          </select>
+        </div>
+
+        <div className="filter-wrap">
+          <span className="filter-label">Squad</span>
+          <select
+            className="filter-trigger filter-select"
+            value={squad}
+            onChange={e => setSquad(e.target.value)}
+          >
+            {SQUADS.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
 
