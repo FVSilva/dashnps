@@ -566,10 +566,13 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
     return avgValues(rows.map(r => r.nps));
   }, [baseCurrentData]);
 
+  // CSAT médio real: usa valores de BD_Satisfação via csatLookup (escala 1-5)
   const csatMedia = useMemo(() => {
-    const rows = baseCurrentData.filter(r => r.csat !== null);
-    return avgValues(rows.map(r => r.csat));
-  }, [baseCurrentData]);
+    const vals = baseCurrentData
+      .map(r => csatLookup.get(`${r.cliente}||${r.data}`) ?? null)
+      .filter((v): v is number => v !== null);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  }, [baseCurrentData, csatLookup]);
 
   // All data grouped by cliente for modal history
   const allDataByCliente = useMemo(() => {
@@ -758,7 +761,7 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
           )}
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">CSAT Médio (score)</div>
+          <div className="kpi-label">CSAT Médio</div>
           {loading ? <div className="kpi-skeleton" /> : (
             <div className="kpi-value">{csatMedia !== null ? csatMedia.toFixed(2) : '—'}</div>
           )}
