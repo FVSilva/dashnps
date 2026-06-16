@@ -31,7 +31,11 @@ const NAV_ITEMS: { icon: string; label: string; page: Page }[] = [
 ];
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('nps-csat');
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    const param = new URLSearchParams(window.location.search).get('page') as Page;
+    const valid: Page[] = ['nps-csat', 'health-score', 'resultados', 'relatorios'];
+    return valid.includes(param) ? param : 'nps-csat';
+  });
 
   const { data, loading, error, lastUpdated, refresh, dataSource } = useSheets(
     import.meta.env.VITE_SPREADSHEET_ID ? {
@@ -260,3 +264,4 @@ export default function App() {
     </div>
   );
 }
+
