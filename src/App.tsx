@@ -134,8 +134,7 @@ export default function App() {
               {currentPage === 'relatorios' && 'Relatórios'}
             </h1>
             <p className="page-subtitle">
-              {filters.squad}
-              {currentPage === 'nps-csat' ? ` · ${periodoDisplay}` : ''}
+              {currentPage === 'nps-csat' ? periodoDisplay : ''}
             </p>
           </div>
           <span className={`data-source-badge ${dataSource === 'mock' ? 'mock' : ''}`}>
