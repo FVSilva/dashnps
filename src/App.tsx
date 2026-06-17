@@ -106,7 +106,6 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-text">V4</div>
-          <div className="sidebar-logo-sub">V4 Company</div>
         </div>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map(item => (
@@ -121,7 +120,6 @@ export default function App() {
             </a>
           ))}
         </nav>
-        <div className="sidebar-squad">{filters.squad}</div>
       </aside>
 
       {/* Conteúdo principal */}
