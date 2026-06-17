@@ -623,11 +623,17 @@ export function ResultadosPage({ data, loading, error, onRefresh }: Props) {
             className="filter-trigger filter-select"
             value={periodoFiltro}
             onChange={e => setPeriodoFiltro(e.target.value)}
+            disabled={loading && todosPeriodos.length === 0}
           >
-            <option value="">Mais recente</option>
-            {todosPeriodos.map(p => (
-              <option key={p} value={p}>{formatPeriodo(p)}</option>
-            ))}
+            {loading && todosPeriodos.length === 0
+              ? <option value="">Carregando...</option>
+              : <>
+                  <option value="">Mais recente</option>
+                  {todosPeriodos.map(p => (
+                    <option key={p} value={p}>{formatPeriodo(p)}</option>
+                  ))}
+                </>
+            }
           </select>
         </div>
         <div className="filter-wrap">

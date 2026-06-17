@@ -638,11 +638,17 @@ export function HealthScorePage({ data, loading, error, onRefresh, satisfacaoDat
             className="filter-trigger filter-select"
             value={periodoFiltro}
             onChange={e => setPeriodoFiltro(e.target.value)}
+            disabled={loading && todosPeriodos.length === 0}
           >
-            <option value="">Último disponível</option>
-            {todosPeriodos.map(p => (
-              <option key={p} value={p}>{formatPeriodo(p)}</option>
-            ))}
+            {loading && todosPeriodos.length === 0
+              ? <option value="">Carregando...</option>
+              : <>
+                  <option value="">Último disponível</option>
+                  {todosPeriodos.map(p => (
+                    <option key={p} value={p}>{formatPeriodo(p)}</option>
+                  ))}
+                </>
+            }
           </select>
         </div>
 
