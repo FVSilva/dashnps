@@ -106,7 +106,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-text">V4</div>
-          <div className="sidebar-logo-sub">eKyte · {filters.squad}</div>
+          <div className="sidebar-logo-sub">V4 Company</div>
         </div>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map(item => (
